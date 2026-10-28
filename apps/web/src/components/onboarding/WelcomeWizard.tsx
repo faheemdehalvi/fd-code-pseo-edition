@@ -230,7 +230,7 @@ export function WelcomeWizard({
             <div className="flex items-baseline gap-1.5" role="img" aria-label="FD CODE">
               <FDCodeWordmark className="h-4 w-auto shrink-0" aria-hidden />
               <span className="text-2xl font-medium tracking-tight text-muted-foreground">
-                Code
+                CODE
               </span>
             </div>
           }
@@ -483,7 +483,7 @@ function ConnectAccountOption({
           }
         >
           <CloudIcon className="size-4 text-muted-foreground" />
-          <span className="flex-1 text-left">T3 Connect</span>
+          <span className="flex-1 text-left">FD CODE Connect</span>
           <span className="text-xs text-muted-foreground">
             {!isLoaded
               ? "Loading sign-in…"

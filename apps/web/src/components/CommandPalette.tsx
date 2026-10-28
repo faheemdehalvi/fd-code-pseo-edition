@@ -1,5 +1,7 @@
 "use client";
 
+import { openPseoWorkspace } from "./pseo/panelEvents";
+
 import { threadPullRequestLinkMode } from "@fdcode/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@fdcode/shared/threadPullRequests";
 
@@ -2029,6 +2031,17 @@ function OpenCommandPaletteDialog(props: {
 
   actionItems.push({
     kind: "action",
+    value: "action:pseo",
+    searchTerms: ["pseo", "content", "brief", "article", "editorial"],
+    title: "Open pSEO workspace",
+    icon: <FileSearchIcon className={ITEM_ICON_CLASS} />,
+    run: async () => {
+      openPseoWorkspace();
+    },
+  });
+
+  actionItems.push({
+    kind: "action",
     value: "action:usage",
     searchTerms: ["usage", "use", "tokens", "cost", "spend", "limits", "stats", "analytics"],
     title: "Open usage",
@@ -2073,7 +2086,7 @@ function OpenCommandPaletteDialog(props: {
         "grouping",
         "checkout",
         "remove",
-        "t3.json",
+        "fd-code.json",
       ],
       title: "Project settings",
       description: contextualProjectGroup.displayName,

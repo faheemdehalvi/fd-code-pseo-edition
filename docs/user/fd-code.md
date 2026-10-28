@@ -24,6 +24,14 @@ Routing applies to plain-text, single-model messages in the primary desktop/web 
 
 ARTsie and Brain use their installed local services. Their data, provider credentials, chat histories and Laya tokens are not bundled in the DMG.
 
+## pSEO content workspace
+
+Open **pSEO** beside ARTsie in the sidebar, or choose **Open pSEO workspace** from the command palette. Create an article, prepare and approve its brief, attach research sources, then move to writing. Brief changes require reapproval; reviewed drafts need fresh checks after edits.
+
+Choose an existing project and select **Work with agent** to prepare a prompt in the normal composer. Review it and choose your configured provider before sending. Agent responses currently return to the conversation; copy reviewed work back into the article. For media work, use **ARTsie** in the workspace. Its panel uses the primary host, which can differ from the selected agent project's environment.
+
+Content is saved in this browser or desktop profile, separately for each origin. Use workspace backup and restore to transfer drafts from the standalone preview or between devices. The preliminary checks do not replace the full publish gate, quality audit or human review. SEO data sources and CMS publishing are not connected yet. The separate native mobile client does not include this workspace.
+
 ## Recall history on demand
 
 Provider switches carry a bounded history handoff. Changing models within a resumed

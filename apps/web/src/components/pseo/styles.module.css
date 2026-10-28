@@ -1,0 +1,1638 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@1,500&display=swap");
+
+.pseo-app {
+  font-family: "DM Sans", sans-serif;
+  color: #25232a;
+  background: #f7f6f3;
+  font-synthesis: none;
+  font-weight: 400;
+  --orange: #ed662e;
+  --border: #e8e5df;
+  --muted: #8c8990;
+}
+.pseo-app * {
+  box-sizing: border-box;
+}
+.pseo-app {
+  margin: 0;
+}
+.pseo-app button,
+.pseo-app input,
+.pseo-app textarea,
+.pseo-app select {
+  font: inherit;
+}
+.pseo-app button,
+.pseo-app a,
+.pseo-app input,
+.pseo-app textarea,
+.pseo-app select {
+  -webkit-tap-highlight-color: transparent;
+}
+.pseo-app button {
+  cursor: pointer;
+}
+.pseo-app button:disabled,
+.pseo-app textarea:disabled {
+  cursor: not-allowed;
+}
+.pseo-app button {
+  border: 0;
+}
+.pseo-app a {
+  color: inherit;
+}
+.pseo-app button:focus-visible,
+.pseo-app a:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+.pseo-app input:focus,
+.pseo-app textarea:focus,
+.pseo-app select:focus {
+  outline: 2px solid #ed662e50;
+  outline-offset: 1px;
+}
+.pseo-app button svg {
+  flex-shrink: 0;
+}
+.pseo-app button {
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.pseo-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 252px 1fr;
+}
+.pseo-app .sidebar {
+  background: #1c1d23;
+  color: #a5a5af;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 15px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.pseo-app .brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+  color: #faf9f6;
+  margin: 0 10px 32px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -1px;
+}
+.pseo-app .brand-icon {
+  width: 34px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--orange);
+  color: white;
+  border-radius: 9px;
+}
+.pseo-app .brand-edition {
+  font-family: "DM Mono", monospace;
+  display: block;
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  margin-top: -3px;
+  color: #a7a7b1;
+}
+.pseo-app .beta {
+  margin-left: auto;
+  font-family: "DM Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 0.6px;
+  padding: 4px 5px;
+  border: 1px solid #3c3c45;
+  color: #92929e;
+  border-radius: 4px;
+}
+.pseo-app .workspace-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #292a31;
+  border: 1px solid #37373f;
+  border-radius: 8px;
+  padding: 12px;
+  color: #eee;
+  text-align: left;
+  margin-bottom: 30px;
+  min-width: 0;
+}
+.pseo-app .workspace-switch > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.pseo-app .workspace-switch strong {
+  font-size: 11px;
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pseo-app .workspace-switch small {
+  display: block;
+  font-size: 10px;
+  color: #9999a6;
+  margin-top: 4px;
+}
+.pseo-app .client-avatar {
+  background: #45413e;
+  color: #f5c1a6;
+  font-size: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.pseo-app .side-section-label,
+.pseo-app .queue-heading {
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 1.1px;
+  color: #767681;
+}
+.pseo-app .side-section-label {
+  margin: 0 12px 12px;
+}
+.pseo-app .nav-selected,
+.pseo-app .side-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: 7px;
+  font-size: 12px;
+  width: 100%;
+  text-align: left;
+}
+.pseo-app .nav-selected {
+  background: #38302c;
+  color: #fac5aa;
+}
+.pseo-app .side-link {
+  background: transparent;
+  color: #a5a5af;
+  margin-top: 4px;
+}
+.pseo-app .side-link:hover {
+  background: #282930;
+}
+.pseo-app .nav-count {
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  background: #5a3c2c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+.pseo-app .connection-dot {
+  width: 5px;
+  height: 5px;
+  background: #6f6e78;
+  border-radius: 50%;
+  margin-left: auto;
+}
+.pseo-app .queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 30px 10px 10px;
+}
+.pseo-app .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: inherit;
+  padding: 5px;
+  border-radius: 4px;
+}
+.pseo-app .icon-button:hover {
+  background: #88888818;
+}
+.pseo-app .queue-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 7px 12px;
+  padding: 7px 8px;
+  border: 1px solid #36373f;
+  border-radius: 5px;
+  color: #777986;
+}
+.pseo-app .queue-search input {
+  background: none;
+  border: 0;
+  outline: none !important;
+  color: #ccc;
+  width: 100%;
+  font-size: 10px;
+  min-width: 0;
+}
+.pseo-app .queue-search kbd {
+  font-size: 12px;
+  color: #686974;
+}
+.pseo-app .article-list {
+  overflow: auto;
+  flex: 1;
+  margin: 0 -5px;
+  min-height: 80px;
+}
+.pseo-app .article-item {
+  display: flex;
+  gap: 10px;
+  background: none;
+  color: #9495a0;
+  text-align: left;
+  padding: 13px 13px;
+  border-left: 2px solid transparent;
+  width: 100%;
+  border-radius: 4px;
+}
+.pseo-app .article-item > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.pseo-app .article-item > span {
+  min-width: 0;
+  flex: 1;
+}
+.pseo-app .article-item strong {
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+  line-height: 1.6;
+}
+.pseo-app .article-item small {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  color: #7d7e89;
+}
+.pseo-app .article-item.active {
+  background: #2c2d35;
+  color: #f5f2ed;
+  border-left-color: var(--orange);
+}
+.pseo-app .article-item.active > svg {
+  color: #f19c74;
+}
+.pseo-app .item-format {
+  margin-left: auto;
+  font-size: 8px;
+  color: #72747e;
+}
+.pseo-app .stage-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #b69a73;
+  flex-shrink: 0;
+}
+.pseo-app .stage-dot.research {
+  background: #a090c4;
+}
+.pseo-app .stage-dot.writing {
+  background: #dc8c5f;
+}
+.pseo-app .stage-dot.review {
+  background: #749ec0;
+}
+.pseo-app .stage-dot.handover {
+  background: #7ea888;
+}
+.pseo-app .empty-queue {
+  padding: 10px 18px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #777985;
+}
+.pseo-app .new-article {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #b9bac2;
+  background: none;
+  border: 1px dashed #43444c;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 11px;
+  margin: 16px 7px 23px;
+}
+.pseo-app .new-article:hover {
+  background: #2c2d34;
+}
+.pseo-app .sidebar-bottom {
+  border-top: 1px solid #34353e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 19px 8px;
+}
+.pseo-app .local-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  color: #d2d0d7;
+}
+.pseo-app .local-note small {
+  display: block;
+  font-size: 9px;
+  color: #70727e;
+  margin-top: 4px;
+}
+.pseo-app .local-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #93b5a2;
+}
+.pseo-app .main-area {
+  min-width: 0;
+}
+.pseo-app .topbar {
+  height: 63px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding: 0 31px;
+  background: #fbfaf8;
+}
+.pseo-app .breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 11px;
+  color: #959099;
+}
+.pseo-app .breadcrumb strong {
+  font-weight: 500;
+  color: #5b5761;
+}
+.pseo-app .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.pseo-app .manual-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #8c878d;
+}
+.pseo-app .manual-badge svg {
+  fill: #ad9c85;
+  color: #ad9c85;
+}
+.pseo-app .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #706b73;
+  background: none;
+  padding: 5px;
+}
+.pseo-app .text-button:hover {
+  color: var(--orange);
+}
+.pseo-app .workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 35px 33px 30px;
+}
+.pseo-app .eyebrow {
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  color: #9a928c;
+  letter-spacing: 1.2px;
+}
+.pseo-app .workspace-heading h1 {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  line-height: 1.3;
+  margin: 10px 0 9px;
+}
+.pseo-app .workspace-heading h1 em {
+  font-family: "Playfair Display", serif;
+  color: var(--orange);
+  font-weight: 500;
+}
+.pseo-app .workspace-heading p {
+  font-size: 11px;
+  color: #928a89;
+  margin: 0;
+}
+.pseo-app .queue-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid #ddd7ce;
+  padding-left: 22px;
+}
+.pseo-app .queue-summary strong {
+  font-family: "DM Mono", monospace;
+  font-size: 28px;
+  font-weight: 400;
+  color: #b2a99c;
+}
+.pseo-app .queue-summary span {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #958d83;
+}
+.pseo-app .studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 294px;
+  margin: 0 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  min-height: calc(100vh - 250px);
+}
+.pseo-app .document-area {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fffefd;
+}
+.pseo-app .document-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 21px 27px 12px;
+}
+.pseo-app .format-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f1ea;
+  border: 1px solid #ebe4da;
+  border-radius: 4px;
+  color: #9c8362;
+  font-size: 9px;
+  padding: 4px 7px;
+}
+.pseo-app .article-title {
+  display: block;
+  width: calc(100% - 54px);
+  border: 0;
+  background: none;
+  font-size: 22px;
+  color: #302b30;
+  font-weight: 550;
+  letter-spacing: -0.5px;
+  margin: 0 27px;
+  padding: 7px 0;
+  line-height: 1.4;
+}
+.pseo-app .article-meta {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 5px 27px 20px;
+  flex-wrap: wrap;
+}
+.pseo-app .article-meta label {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: #a39ba0;
+  font-size: 9px;
+}
+.pseo-app .article-meta input {
+  background: #f8f6f2;
+  border: 1px solid #eee9e1;
+  border-radius: 4px;
+  padding: 4px 7px;
+  max-width: 200px;
+  min-width: 80px;
+  color: #7d7368;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+}
+.pseo-app .unmeasured {
+  font-size: 8px;
+  color: #a69c95;
+}
+.pseo-app .pipeline {
+  margin: 0 27px 23px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 9px;
+  border: 1px solid #e9e4db;
+  background: #fbfaf7;
+  border-radius: 6px;
+  gap: 2px;
+}
+.pseo-app .pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  color: #aaa39b;
+  font-size: 9px;
+  padding: 3px;
+  white-space: nowrap;
+}
+.pseo-app .step-circle {
+  width: 17px;
+  height: 17px;
+  border: 1px solid #ddd7ce;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  background: white;
+  color: #aca397;
+}
+.pseo-app .pipeline-step.current {
+  color: #c66735;
+  font-weight: 600;
+}
+.pseo-app .pipeline-step.current .step-circle {
+  background: var(--orange);
+  color: white;
+  border-color: var(--orange);
+}
+.pseo-app .pipeline-step.complete .step-circle {
+  background: #e8ede8;
+  color: #74907a;
+  border-color: #d5dfd7;
+}
+.pseo-app .step-arrow {
+  color: #c4bcb2;
+  margin-left: 4px;
+}
+.pseo-app .document-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding: 0 27px;
+  gap: 10px;
+}
+.pseo-app .document-tabs > div {
+  display: flex;
+  gap: 19px;
+}
+.pseo-app .document-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  color: #a09896;
+  font-size: 10px;
+  border-bottom: 2px solid transparent;
+  padding: 12px 0;
+}
+.pseo-app .document-tabs button.selected {
+  border-color: var(--orange);
+  color: #bd693f;
+}
+.pseo-app .document-save {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  color: #a4a198;
+  white-space: nowrap;
+}
+.pseo-app .document-save > span {
+  width: 4px;
+  height: 4px;
+  background: #8fab91;
+  border-radius: 50%;
+}
+.pseo-app .document-content {
+  padding: 23px 27px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 350px;
+}
+.pseo-app .approval-notice {
+  display: flex;
+  gap: 10px;
+  border: 1px solid #f2d8c2;
+  background: #fdf6ed;
+  border-radius: 6px;
+  padding: 12px 13px;
+  margin-bottom: 24px;
+  color: #bf8652;
+}
+.pseo-app .approval-notice > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pseo-app .approval-notice strong {
+  font-size: 10px;
+  font-weight: 550;
+  color: #9a6c43;
+}
+.pseo-app .approval-notice p {
+  font-size: 9px;
+  line-height: 1.7;
+  margin: 4px 0 0;
+  color: #ac947d;
+}
+.pseo-app .approval-notice.approved {
+  border-color: #cfe2d3;
+  background: #f4f8f3;
+  color: #79977e;
+}
+.pseo-app .approval-notice.approved strong {
+  color: #57745c;
+}
+.pseo-app .approval-notice.approved p {
+  color: #819584;
+}
+.pseo-app .field-heading {
+  display: flex;
+  justify-content: space-between;
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+  color: #a59b91;
+  margin-bottom: 12px;
+}
+.pseo-app .field-heading span {
+  font-family: "DM Sans", sans-serif;
+  letter-spacing: 0;
+  color: #b0a9a1;
+}
+.pseo-app .brief-editor,
+.pseo-app .body-editor {
+  width: 100%;
+  background: none;
+  border: 0;
+  resize: vertical;
+  flex: 1;
+  min-height: 280px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #615650;
+  padding: 2px 0 16px;
+}
+.pseo-app .brief-editor::placeholder,
+.pseo-app .body-editor::placeholder {
+  color: #b3aaa1;
+}
+.pseo-app .body-editor {
+  min-height: 430px;
+}
+.pseo-app .body-editor:disabled {
+  opacity: 0.5;
+}
+.pseo-app .approval-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+}
+.pseo-app .approval-actions > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  color: #a49b91;
+}
+.pseo-app .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 13px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.pseo-app .button.primary {
+  background: var(--orange);
+  color: white;
+  border: 1px solid #dc5c2a;
+  box-shadow: 0 1px 2px #a341181a;
+}
+.pseo-app .button.primary:hover {
+  background: #d95825;
+}
+.pseo-app .button.secondary {
+  background: #f8f6f2;
+  color: #766d64;
+  border: 1px solid #e5ddd2;
+}
+.pseo-app .button.secondary:hover {
+  background: #ede8e0;
+}
+.pseo-app .document-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding: 12px 27px;
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  color: #aaa39b;
+}
+.pseo-app .document-footer > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pseo-app .footer-divider {
+  color: #d8d1c7;
+}
+.pseo-app .inspector {
+  display: flex;
+  flex-direction: column;
+  background: #fbfaf7;
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+.pseo-app .inspector-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 23px 19px;
+}
+.pseo-app .inspector-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: #f2ede4;
+  color: #a98d69;
+  border: 1px solid #e5dccf;
+  border-radius: 7px;
+}
+.pseo-app .inspector-heading strong {
+  display: block;
+  font-size: 11px;
+  color: #61594f;
+  font-weight: 550;
+}
+.pseo-app .inspector-heading small {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  color: #a69b8e;
+}
+.pseo-app .inspector-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 17px;
+  border-bottom: 1px solid var(--border);
+}
+.pseo-app .inspector-tabs button {
+  flex: 1;
+  padding: 10px 0;
+  background: none;
+  color: #a89e91;
+  font-size: 9px;
+  border-bottom: 2px solid transparent;
+}
+.pseo-app .inspector-tabs button.selected {
+  border-color: #a88b63;
+  color: #88704f;
+}
+.pseo-app .inspector-body {
+  padding: 22px 19px;
+  flex: 1;
+}
+.pseo-app .panel-label {
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #9c8e7b;
+  display: flex;
+  justify-content: space-between;
+}
+.pseo-app .panel-label > span {
+  letter-spacing: 0;
+  font-size: 9px;
+}
+.pseo-app .panel-description {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #a3998c;
+  margin: 12px 0 19px;
+}
+.pseo-app .evidence-empty {
+  border: 1px dashed #e0d8cb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px;
+  border-radius: 6px;
+  color: #c1b09a;
+}
+.pseo-app .evidence-empty strong {
+  display: block;
+  color: #9b8b77;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 10px 0 0;
+}
+.pseo-app .evidence-empty p {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #b3a694;
+  margin: 9px 0 0;
+}
+.pseo-app .add-source {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fffdfa;
+  border: 1px solid #e3dbcf;
+  color: #988163;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 10px;
+  padding: 10px;
+  margin-top: 12px;
+}
+.pseo-app .add-source:hover {
+  background: #f4efe5;
+}
+.pseo-app .source-card {
+  background: #fffefd;
+  border: 1px solid #e5ddd1;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 11px 0;
+}
+.pseo-app .source-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #b39266;
+}
+.pseo-app .source-card-top button {
+  margin-left: auto;
+  color: #b4a89a;
+}
+.pseo-app .source-card a {
+  font-size: 11px;
+  text-decoration: none;
+  font-weight: 500;
+  color: #75644f;
+  line-height: 1.6;
+  display: block;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.pseo-app .source-card a:hover {
+  text-decoration: underline;
+}
+.pseo-app .source-card p {
+  font-size: 10px;
+  color: #a29585;
+  line-height: 1.7;
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+.pseo-app .source-card > small {
+  font-size: 8px;
+  color: #b9aa97;
+  font-family: "DM Mono", monospace;
+}
+.pseo-app .context-card {
+  padding: 17px;
+  background: #f3efe7;
+  border: 1px solid #e9e1d4;
+  border-radius: 6px;
+  margin-top: 28px;
+}
+.pseo-app .context-card-label {
+  font-family: "DM Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #a89a85;
+  margin-bottom: 10px;
+}
+.pseo-app .context-card > strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a775d;
+  line-height: 1.7;
+}
+.pseo-app .context-card p {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #ac9b85;
+  margin-bottom: 0;
+}
+.pseo-app .inspector-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #b1a796;
+}
+.pseo-app .inspector-footer > span:last-child {
+  margin-left: auto;
+  font-family: "DM Mono", monospace;
+  font-size: 7px;
+}
+.pseo-app .small-orb {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: #c2ab8a;
+}
+.pseo-app .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #15131a85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 24px;
+  backdrop-filter: blur(3px);
+}
+.pseo-app .modal {
+  width: min(500px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fffdf9;
+  border-radius: 12px;
+  padding: 27px;
+  box-shadow: 0 25px 90px #0003;
+  border: 1px solid #e8e0d3;
+}
+.pseo-app .modal-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.pseo-app .modal h2 {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1.5;
+}
+.pseo-app .modal-description {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #9a8c80;
+  margin: 13px 0 22px;
+}
+.pseo-app .modal label,
+.pseo-app .source-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 10px;
+  color: #897866;
+  margin: 17px 0;
+}
+.pseo-app .modal input,
+.pseo-app .modal textarea,
+.pseo-app .modal select,
+.pseo-app .source-form input,
+.pseo-app .source-form textarea {
+  background: white;
+  border: 1px solid #e5dbce;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 12px;
+  color: #6b5d4d;
+  width: 100%;
+}
+.pseo-app .modal textarea,
+.pseo-app .source-form textarea {
+  min-height: 85px;
+  resize: vertical;
+  line-height: 1.7;
+}
+.pseo-app .form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
+}
+.pseo-app .source-form {
+  margin-top: 18px;
+}
+.pseo-app .source-form input,
+.pseo-app .source-form textarea {
+  font-size: 10px;
+  padding: 8px;
+}
+.pseo-app .source-form label {
+  font-size: 9px;
+}
+.pseo-app .source-form .button {
+  padding: 8px;
+  font-size: 9px;
+}
+.pseo-app .integration-row {
+  display: flex;
+  gap: 11px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.pseo-app .integration-icon {
+  width: 33px;
+  height: 33px;
+  border: 1px solid #e9e0d4;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #ac9270;
+  background: #faf6ef;
+  flex-shrink: 0;
+}
+.pseo-app .integration-row strong {
+  font-size: 11px;
+  color: #76634d;
+  font-weight: 500;
+}
+.pseo-app .integration-row small {
+  font-size: 9px;
+  display: block;
+  color: #ae9d88;
+  margin-top: 5px;
+}
+.pseo-app .integration-row > span:last-child {
+  margin-left: auto;
+  font-size: 8px;
+  color: #ae9d88;
+  white-space: nowrap;
+}
+.pseo-app .welcome-empty,
+.pseo-app .empty-draft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #c6b69e;
+  padding: 60px 25px;
+  min-height: 350px;
+}
+.pseo-app .welcome-empty h2,
+.pseo-app .empty-draft h2 {
+  font-family: "Playfair Display", serif;
+  font-weight: 500;
+  font-size: 26px;
+  color: #8f7b60;
+}
+.pseo-app .welcome-empty p,
+.pseo-app .empty-draft p {
+  max-width: 390px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #ad9b83;
+  margin: 0 0 24px;
+}
+.pseo-app .draft-preview {
+  color: #6a5c4c;
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.pseo-app .draft-preview h1 {
+  font-size: 26px;
+}
+.pseo-app .draft-preview h2 {
+  font-size: 21px;
+  margin-top: 30px;
+}
+.pseo-app .draft-preview h3 {
+  font-size: 17px;
+}
+.pseo-app .draft-preview p {
+  margin: 0;
+}
+.pseo-app .check-results {
+  margin-top: 20px;
+}
+.pseo-app .check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pseo-app .check-status {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e8ede5;
+  color: #809879;
+}
+.pseo-app .check-item.fail .check-status {
+  background: #f5e4dc;
+  color: #cc895f;
+}
+.pseo-app .check-item.manual .check-status {
+  background: #eee8dd;
+  color: #b8a07e;
+}
+.pseo-app .check-item strong {
+  font-size: 10px;
+  color: #89765e;
+  font-weight: 500;
+}
+.pseo-app .check-item p {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #a99a86;
+  margin: 6px 0;
+}
+.pseo-app .check-item small {
+  font-size: 8px;
+  color: #b9a58a;
+}
+.pseo-app .full-width {
+  width: 100%;
+}
+.pseo-app .inline-notice {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #b58d60;
+  background: #faf1df;
+  padding: 10px 12px;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+.pseo-app .activity-list {
+  padding-top: 8px;
+}
+.pseo-app .activity-item {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 22px;
+}
+.pseo-app .activity-dot {
+  width: 6px;
+  height: 6px;
+  background: #c1ad8f;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.pseo-app .activity-item strong {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #99846a;
+  font-weight: 400;
+  display: block;
+}
+.pseo-app .activity-item time {
+  display: block;
+  font-size: 8px;
+  color: #b8a992;
+  margin-top: 5px;
+}
+.pseo-app .error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 24px 16px;
+  padding: 12px 16px;
+  border: 1px solid #ebc6af;
+  background: #fff0e8;
+  color: #ad6845;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.7;
+}
+@media (min-width: 1600px) {
+  .pseo-app .workspace-heading {
+    padding: 42px 50px 35px;
+  }
+  .pseo-app .studio {
+    margin: 0 40px 30px;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    min-height: calc(100vh - 280px);
+  }
+  .pseo-app .document-header {
+    padding-top: 28px;
+  }
+  .pseo-app .document-content {
+    padding: 28px 40px;
+  }
+  .pseo-app .article-title {
+    margin-left: 40px;
+    width: calc(100% - 80px);
+    font-size: 28px;
+  }
+  .pseo-app .article-meta {
+    margin-left: 40px;
+  }
+  .pseo-app .pipeline {
+    margin: 0 40px 26px;
+  }
+  .pseo-app .document-tabs {
+    padding: 0 40px;
+  }
+  .pseo-app .document-header {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  .pseo-app .brief-editor {
+    font-size: 14px;
+    min-height: 360px;
+  }
+  .pseo-app .inspector-body {
+    padding: 26px;
+  }
+  .pseo-app .inspector-heading {
+    padding: 26px;
+  }
+}
+@media (max-width: 1200px) {
+  .pseo-app {
+    grid-template-columns: 215px 1fr;
+  }
+  .pseo-app .sidebar {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .pseo-app .brand {
+    font-size: 21px;
+    gap: 8px;
+  }
+  .pseo-app .beta {
+    font-size: 6px;
+  }
+  .pseo-app .studio {
+    grid-template-columns: minmax(0, 1fr) 255px;
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  .pseo-app .workspace-heading {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+  .pseo-app .document-header {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .pseo-app .article-title {
+    margin-left: 20px;
+    width: calc(100% - 40px);
+    font-size: 20px;
+  }
+  .pseo-app .article-meta {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .pseo-app .pipeline {
+    margin-left: 15px;
+    margin-right: 15px;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+  .pseo-app .pipeline-step {
+    gap: 4px;
+    font-size: 8px;
+  }
+  .pseo-app .step-arrow {
+    margin-left: 0;
+  }
+  .pseo-app .document-tabs {
+    padding: 0 20px;
+  }
+  .pseo-app .document-content {
+    padding: 20px;
+  }
+  .pseo-app .inspector-heading {
+    padding: 20px 14px;
+  }
+  .pseo-app .inspector-body {
+    padding: 20px 14px;
+  }
+  .pseo-app .approval-actions > span {
+    max-width: 90px;
+    font-size: 8px;
+    line-height: 1.7;
+  }
+  .pseo-app .queue-summary {
+    display: none;
+  }
+  .pseo-app .document-save {
+    font-size: 7px;
+  }
+}
+@media (max-width: 1000px) {
+  .pseo-app .studio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pseo-app .inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .pseo-app .inspector-heading {
+    padding: 18px 22px;
+  }
+  .pseo-app .inspector-body {
+    padding: 20px 24px;
+  }
+  .pseo-app .inspector-tabs {
+    margin: 0 22px;
+  }
+  .pseo-app .inspector-tabs button {
+    flex: 0 0 90px;
+  }
+  .pseo-app .context-card {
+    margin-top: 18px;
+  }
+  .pseo-app .document-save {
+    font-size: 8px;
+  }
+  .pseo-app .approval-actions > span {
+    max-width: none;
+  }
+  .pseo-app .pipeline-step {
+    font-size: 10px;
+    gap: 7px;
+  }
+  .pseo-app .pipeline {
+    padding: 12px;
+  }
+  .pseo-app .topbar-right .manual-badge {
+    display: none;
+  }
+  .pseo-app .article-title {
+    font-size: 24px;
+  }
+  .pseo-app .source-card {
+    max-width: 100%;
+  }
+  .pseo-app .brief-editor {
+    min-height: 310px;
+  }
+  .pseo-app .inspector-footer {
+    padding: 12px 24px;
+  }
+}
+@media (max-width: 700px) {
+  .pseo-app {
+    grid-template-columns: 1fr;
+  }
+  .pseo-app .sidebar {
+    position: static;
+    height: auto;
+    padding: 17px 15px 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+  .pseo-app .brand {
+    margin: 0;
+    font-size: 22px;
+  }
+  .pseo-app .brand-edition {
+    font-size: 7px;
+  }
+  .pseo-app .beta {
+    display: none;
+  }
+  .pseo-app .workspace-switch {
+    margin: 0;
+    padding: 7px 9px;
+    max-width: 190px;
+  }
+  .pseo-app .workspace-switch strong {
+    max-width: 100px;
+  }
+  .pseo-app .workspace-switch small {
+    font-size: 8px;
+  }
+  .pseo-app .client-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 9px;
+  }
+  .pseo-app .side-section-label,
+  .pseo-app .nav-selected,
+  .pseo-app .side-link,
+  .pseo-app .queue-heading,
+  .pseo-app .queue-search,
+  .pseo-app .sidebar-bottom {
+    display: none;
+  }
+  .pseo-app .article-list {
+    display: flex;
+    grid-column: 1/-1;
+    max-height: 93px;
+    overflow: auto;
+    margin: 0 -4px;
+    gap: 5px;
+  }
+  .pseo-app .article-item {
+    flex: 0 0 210px;
+    border: 1px solid #383943;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  .pseo-app .article-item.active {
+    border: 1px solid #9e6b4d;
+  }
+  .pseo-app .article-item strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+  .pseo-app .article-item small {
+    font-size: 8px;
+  }
+  .pseo-app .item-format {
+    font-size: 7px;
+  }
+  .pseo-app .new-article {
+    grid-column: 1/-1;
+    margin: 0;
+    padding: 7px;
+    font-size: 10px;
+  }
+  .pseo-app .topbar {
+    height: 47px;
+    padding: 0 20px;
+  }
+  .pseo-app .breadcrumb {
+    font-size: 10px;
+  }
+  .pseo-app .text-button {
+    font-size: 9px;
+  }
+  .pseo-app .workspace-heading {
+    padding: 27px 22px 24px;
+  }
+  .pseo-app .workspace-heading h1 {
+    font-size: 27px;
+  }
+  .pseo-app .workspace-heading p {
+    font-size: 10px;
+    line-height: 1.8;
+  }
+  .pseo-app .eyebrow {
+    font-size: 7px;
+  }
+  .pseo-app .studio {
+    margin: 0 12px 18px;
+    border-radius: 8px;
+  }
+  .pseo-app .article-title {
+    font-size: 22px;
+  }
+  .pseo-app .pipeline {
+    padding: 10px 5px;
+    margin: 0 15px 20px;
+  }
+  .pseo-app .pipeline-step {
+    font-size: 8px;
+    gap: 4px;
+  }
+  .pseo-app .step-circle {
+    width: 16px;
+    height: 16px;
+    font-size: 7px;
+  }
+  .pseo-app .step-arrow {
+    width: 9px;
+  }
+  .pseo-app .document-tabs {
+    padding: 0 20px;
+  }
+  .pseo-app .document-tabs > div {
+    gap: 18px;
+  }
+  .pseo-app .document-tabs button {
+    font-size: 10px;
+  }
+  .pseo-app .document-save {
+    font-size: 7px;
+  }
+  .pseo-app .document-content {
+    padding: 21px 20px;
+  }
+  .pseo-app .approval-actions > span {
+    max-width: 100px;
+    font-size: 8px;
+  }
+  .pseo-app .approval-actions .button {
+    font-size: 9px;
+    padding: 10px;
+  }
+  .pseo-app .document-footer {
+    padding: 12px 20px;
+  }
+  .pseo-app .modal {
+    padding: 23px;
+  }
+  .pseo-app .modal h2 {
+    font-size: 18px;
+  }
+  .pseo-app .modal-description {
+    font-size: 11px;
+  }
+  .pseo-app .modal-backdrop {
+    padding: 15px;
+  }
+  .pseo-app .error-banner {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+  .pseo-app .welcome-empty h2 {
+    font-size: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pseo-app * {
+    transition: none !important;
+  }
+}
+.pseo-app .format-pill select {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: inherit;
+  max-width: 150px;
+  cursor: pointer;
+  padding: 0 10px 0 0;
+}
+
+.pseo-app.pseo-embedded {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+.pseo-app.pseo-embedded .sidebar {
+  height: 100%;
+  min-height: 32rem;
+}
+.pseo-app .host-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 700px) {
+  .pseo-app.pseo-embedded .sidebar {
+    min-height: 0;
+    height: auto;
+  }
+}
+
+.pseo-app.pseo-embedded .topbar {
+  height: auto;
+  min-height: 63px;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-block: 12px;
+}
+.pseo-app.pseo-embedded .topbar-right {
+  flex-wrap: wrap;
+}
+.pseo-app.pseo-embedded .host-actions {
+  flex-wrap: wrap;
+}

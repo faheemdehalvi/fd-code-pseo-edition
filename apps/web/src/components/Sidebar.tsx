@@ -279,6 +279,7 @@ import {
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { ArtsiePanel } from "./ArtsiePanel";
+import { PseoPanel } from "./PseoPanel";
 import { GeneralChatButton } from "./GeneralChatButton";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } from "./ui/menu";
@@ -330,7 +331,7 @@ function sameSidebarProviderEntries(
   return true;
 }
 
-// Threads on non-primary environments (T3 Connect, hosted) resolve their
+// Threads on non-primary environments (FD CODE Connect, hosted) resolve their
 // provider entry from their own environment's config: default instance ids
 // are driver slugs, so a flat map would collide across environments.
 const sidebarProviderEntriesAtom = Atom.make((get) => {
@@ -4537,6 +4538,7 @@ export default function Sidebar() {
       <GeneralChatButton />
       <div className="flex flex-wrap gap-1 border-b px-3 py-2">
         <ArtsiePanel />
+        <PseoPanel />
       </div>
       <SidebarContent
         className="min-h-full"
