@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           git init .
-          git -c http.extraheader="AUTHORIZATION: bearer $TOKEN" fetch --no-tags --depth=1 "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA"
+          git fetch --no-tags --depth=1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA"
           git sparse-checkout set --no-cone '/*' '!/.repos/'
           git -c checkout.workers=0 checkout --detach FETCH_HEAD
 
