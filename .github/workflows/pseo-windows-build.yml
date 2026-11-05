@@ -1,0 +1,97 @@
+# Manual unsigned Windows x64 build of FD CODE pSEO Edition for testers.
+# Runs on a GitHub-hosted Windows runner (the release workflows need
+# blacksmith runners and signing secrets this repo does not have).
+# The WSL runtime is not bundled, so the WSL backend is unavailable in
+# this build. Optionally uploads the installer to an existing release.
+#
+#   gh workflow run pseo-windows-build.yml -f release_tag=pseo-20261105.1
+name: pSEO Windows build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to attach the installer to (empty = artifact only)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows x64 (unsigned)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        shell: bash
+        env:
+          GIT_TERMINAL_PROMPT: "0"
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git -c http.extraheader="AUTHORIZATION: bearer $TOKEN" fetch --no-tags --depth=1 "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA"
+          git sparse-checkout set --no-cone '/*' '!/.repos/'
+          git -c checkout.workers=0 checkout --detach FETCH_HEAD
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
+        with:
+          node-version-file: package.json
+          cache: false
+          run-install: false
+
+      - name: Install dependencies
+        run: vp install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Spectre-mitigated MSVC libs
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installPath = & $vswhere -products * -latest -property installationPath
+          $setupExe = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+          $proc = Start-Process -FilePath $setupExe `
+            -ArgumentList "modify", "--installPath", "`"$installPath`"", "--add", `
+            "Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre", "--quiet", "--norestart" `
+            -Wait -PassThru -NoNewWindow
+          if ($null -eq $proc -or $proc.ExitCode -ne 0) {
+            $code = if ($null -ne $proc) { $proc.ExitCode } else { 1 }
+            Write-Error "Visual Studio Installer failed with exit code $code"
+            exit $code
+          }
+
+      - name: Build desktop artifact
+        shell: bash
+        run: vp run dist:desktop:artifact --platform win --target nsis --arch x64 --verbose
+
+      - name: List output
+        shell: bash
+        run: |
+          ls -la release
+          sha256sum release/*.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fd-code-pseo-windows-x64
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/*.yml
+          if-no-files-found: error
+
+      - name: Attach installer to release
+        if: inputs.release_tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: gh release upload "$RELEASE_TAG" release/*.exe --clobber -R "$GITHUB_REPOSITORY"
