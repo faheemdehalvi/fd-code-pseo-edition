@@ -1,8 +1,8 @@
-# FD CODE
+# FD CODE pSEO Edition
 
-This repository now ships the current **FD CODE** app, based on the newer Alpha codebase, with General chat, local Laya routing, Brain continuity and ARTsie integration.
+This repository contains **FD CODE pSEO Edition**, with a native pSEO content workspace, integrated agent chat, General chat, local Laya routing, Brain continuity and ARTsie integration.
 
-- [Download the macOS Apple Silicon DMG](https://github.com/faheemdehalvi/t3-beta/releases/latest)
+- [pSEO Edition source and releases](https://github.com/faheemdehalvi/fd-code-pseo-edition)
 - [Installation and General/Laya setup](docs/user/fd-code.md)
 
 The older Beta implementation remains in Git history. Upstream T3 Code documentation follows below; upstream downloads are not this customised build.

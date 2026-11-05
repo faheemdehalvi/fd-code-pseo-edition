@@ -1,4 +1,35 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@1,500&display=swap");
+/* Desktop blocks remote stylesheets; a failed lazy CSS load reloads the client. */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/dm-sans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/dm-mono-400-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/dm-mono-500-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/playfair-display-italic-latin.woff2") format("woff2");
+}
 
 .pseo-app {
   font-family: "DM Sans", sans-serif;
@@ -1632,6 +1663,25 @@
 }
 .pseo-app.pseo-embedded .topbar-right {
   flex-wrap: wrap;
+}
+
+/* The native chat narrows the editor independently of the window width. */
+@container pseo-editor (max-width: 1000px) {
+  .pseo-app.pseo-embedded .studio {
+    grid-template-columns: minmax(0, 1fr);
+    margin-inline: 16px;
+  }
+  .pseo-app.pseo-embedded .inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+@media (min-width: 701px) {
+  @container pseo-editor (max-width: 1000px) {
+    .pseo-app.pseo-embedded {
+      grid-template-columns: 190px minmax(0, 1fr);
+    }
+  }
 }
 .pseo-app.pseo-embedded .host-actions {
   flex-wrap: wrap;

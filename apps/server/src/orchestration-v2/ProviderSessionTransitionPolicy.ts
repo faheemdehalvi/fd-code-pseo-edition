@@ -8,7 +8,10 @@ import type {
 import { modelSelectionsEqual } from "@fdcode/shared/model";
 
 import type { ProviderContinuationIdentity } from "@fdcode/provider-core/server/driver";
-import type { ProviderSelectionTransitionPlan } from "@fdcode/provider-core/server/selectionTransition";
+import {
+  requiresRetrievalHandoff,
+  type ProviderSelectionTransitionPlan,
+} from "@fdcode/provider-core/server/selectionTransition";
 
 export type ProviderSessionTransition =
   | { readonly type: "reuse" }
@@ -45,6 +48,9 @@ export function decideProviderSessionTransition(input: {
 
   const current = input.current;
   const target = input.target;
+  if (requiresRetrievalHandoff(current.modelSelection, target.modelSelection)) {
+    return { type: "create_with_handoff" };
+  }
   const continuationCompatible =
     current.continuationIdentity.driverKind === target.continuationIdentity.driverKind &&
     current.continuationIdentity.continuationKey === target.continuationIdentity.continuationKey;

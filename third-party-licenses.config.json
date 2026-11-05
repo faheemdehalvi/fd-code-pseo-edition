@@ -147,6 +147,27 @@
       "name": "Expo text editor implementation",
       "noticeFile": "apps/mobile/modules/fd-code-composer-editor/LICENSE",
       "sourceUrl": "https://github.com/expo/expo"
+    },
+    {
+      "bundles": ["assets", "desktop", "web"],
+      "license": "OFL-1.1",
+      "name": "DM Sans",
+      "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/dmsans",
+      "noticeFile": "apps/web/src/components/pseo/fonts/dmsans-OFL.txt"
+    },
+    {
+      "bundles": ["assets", "desktop", "web"],
+      "license": "OFL-1.1",
+      "name": "DM Mono",
+      "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/dmmono",
+      "noticeFile": "apps/web/src/components/pseo/fonts/dmmono-OFL.txt"
+    },
+    {
+      "bundles": ["assets", "desktop", "web"],
+      "license": "OFL-1.1",
+      "name": "Playfair Display",
+      "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/playfairdisplay",
+      "noticeFile": "apps/web/src/components/pseo/fonts/playfairdisplay-OFL.txt"
     }
   ],
   "packageOverrides": [

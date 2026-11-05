@@ -18,6 +18,10 @@ const READ_TOOLS = new Set([
   "brain_bus_status",
   "brain_session_list",
   "brain_session_read",
+  "brain_structure_search",
+  "brain_structure_outline",
+  "brain_structure_read",
+  "brain_structure_status",
 ]);
 
 export type BrainErrorCode =
@@ -72,14 +76,15 @@ export function createBrainClient(options: BrainClientOptions = {}) {
     options.loadToken ??
     (() =>
       NodeFSP.readFile(NodePath.join(NodeOS.homedir(), ".faheems-brain", "mcp-token"), "utf8"));
-  const timeoutMs = boundedOption(options.timeoutMs, 5_000, 30_000);
   const maxResponseBytes = boundedOption(options.maxResponseBytes, 1_000_000, 4_000_000);
   let nextId = 0;
 
   async function request(
     method: string,
     params: Record<string, unknown>,
+    defaultTimeoutMs = 5_000,
   ): Promise<BrainResult<unknown>> {
+    const timeoutMs = boundedOption(options.timeoutMs, defaultTimeoutMs, 30_000);
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<BrainResult<never>>((resolve) => {
@@ -181,7 +186,11 @@ export function createBrainClient(options: BrainClientOptions = {}) {
     name: string,
     args: Record<string, unknown>,
   ): Promise<BrainResult<BrainToolResult>> {
-    const response = await request("tools/call", { name, arguments: args });
+    const response = await request(
+      "tools/call",
+      { name, arguments: args },
+      name === "brain_structure_search" ? 15_000 : 5_000,
+    );
     if (!response.ok) return response;
     const result = response.value;
     if (!record(result) || !Array.isArray(result.content)) {

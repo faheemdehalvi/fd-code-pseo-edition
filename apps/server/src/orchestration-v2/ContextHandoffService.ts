@@ -22,6 +22,7 @@ import {
   selectHistory,
 } from "@fdcode/provider-core/server/handoffBudget";
 import * as IdAllocator from "@fdcode/provider-core/server/IdAllocator";
+import { retrievableHistory } from "../brain/handoffHistory.ts";
 
 export class ContextHandoffPrepareError extends Schema.TaggedError<ContextHandoffPrepareError>()(
   "ContextHandoffPrepareError",
@@ -446,7 +447,7 @@ const makeContextHandoffService = Effect.fn("orchestrationV2.ContextHandoffServi
         );
       const runStatuses = new Map(input.runs?.map((run) => [run.id, run.status]));
       const coverage = handoffCoverage(input);
-      const selected = selectHistory({
+      const capsule = retrievableHistory({
         messages: input.items.flatMap((item) => {
           const message = historicalMessage(item);
           return message === null
@@ -459,8 +460,9 @@ const makeContextHandoffService = Effect.fn("orchestrationV2.ContextHandoffServi
               ];
         }),
         coverage,
-        budget: tokenCap,
+        omittedItems: 0,
       });
+      const selected = selectHistory({ ...capsule, budget: tokenCap });
       return {
         id: handoffId,
         transferId: input.transferId,
@@ -475,9 +477,11 @@ const makeContextHandoffService = Effect.fn("orchestrationV2.ContextHandoffServi
         summaryText: renderHistory(selected.messages, selected.context),
         history: {
           messages: selected.messages,
-          coverage,
+          coverage: capsule.coverage,
           omittedItems: selected.omittedItems,
-          omittedItemIds: selected.omittedItemIds,
+          omittedItemIds: [
+            ...new Set([...(capsule.omittedItemIds ?? []), ...selected.omittedItemIds]),
+          ],
         },
         createdByProviderInstanceId: null,
         createdAt: input.createdAt,

@@ -12,6 +12,8 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { annotateEnvironmentRequest, requireEnvironmentScope } from "../auth/http.ts";
 import { BetaBrain } from "./Brain.ts";
 import { GeneralChat } from "./GeneralChat.ts";
+import { AppChat } from "./AppChat.ts";
+import { PseoStore } from "./PseoStore.ts";
 import { createArtsieClient } from "./ArtsieClient.ts";
 
 // Reading the workspace is a filesystem read and changing it a filesystem write. Actions
@@ -41,6 +43,8 @@ export const layer = HttpApiBuilder.group(
   Effect.fnUntraced(function* (handlers) {
     const brain = yield* BetaBrain;
     const general = yield* GeneralChat;
+    const appChat = yield* AppChat;
+    const pseo = yield* PseoStore;
     const artsie = createArtsieClient();
     return handlers
       .handle(
@@ -57,6 +61,30 @@ export const layer = HttpApiBuilder.group(
           yield* annotateEnvironmentRequest(args.endpoint.name);
           yield* requireEnvironmentScope(AuthOrchestrationOperateScope);
           return yield* general.send(args.payload);
+        }),
+      )
+      .handle(
+        "appChat",
+        Effect.fn("beta.appChat")(function* (args) {
+          yield* annotateEnvironmentRequest(args.endpoint.name);
+          yield* requireEnvironmentScope(AuthOrchestrationOperateScope);
+          return yield* appChat.open(args.payload);
+        }),
+      )
+      .handle(
+        "pseoWorkspace",
+        Effect.fn("beta.pseoWorkspace")(function* (args) {
+          yield* annotateEnvironmentRequest(args.endpoint.name);
+          yield* requireEnvironmentScope(AuthOrchestrationReadScope);
+          return yield* pseo.get;
+        }),
+      )
+      .handle(
+        "pseoSave",
+        Effect.fn("beta.pseoSave")(function* (args) {
+          yield* annotateEnvironmentRequest(args.endpoint.name);
+          yield* requireEnvironmentScope(AuthOrchestrationOperateScope);
+          return yield* pseo.save(args.payload);
         }),
       )
       .handle(

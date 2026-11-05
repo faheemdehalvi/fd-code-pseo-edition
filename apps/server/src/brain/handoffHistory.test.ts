@@ -8,11 +8,7 @@ import {
 import { retrievableHandoffs } from "./handoffHistory.ts";
 
 const threadId = ThreadId.make("handoff-brain");
-const item = (
-  kind: string,
-  id: string,
-  text: string,
-): OrchestrationV2HistoricalMessage => ({
+const item = (kind: string, id: string, text: string): OrchestrationV2HistoricalMessage => ({
   role: kind === "user_message" ? "user" : "assistant",
   kind,
   text,
@@ -50,6 +46,7 @@ it("hands over a capsule and leaves the rest of a long thread retrievable", () =
 
   expect(history.messages.map((message) => message.itemId)).toEqual([
     "goal",
+    "middle",
     "plan",
     "previous",
     "latest",
@@ -57,13 +54,13 @@ it("hands over a capsule and leaves the rest of a long thread retrievable", () =
   ]);
   const answer = history.messages.at(-1)!.text;
   expect(answer).toContain("Use the SQLite outbox.");
-  expect(answer).toContain("t3_thread_read itemId=answer");
+  expect(answer).toContain('"itemId":"answer"');
   expect(answer.length).toBeLessThan(2_200);
   expect(history.coverage).toContain("Files touched: src/a.ts, src/b.ts");
   expect(history.coverage).toContain("Compact capsule");
-  expect(history.omittedItems).toBe(6);
+  expect(history.omittedItems).toBe(5);
   expect(history.omittedItemIds).toEqual(
-    expect.arrayContaining(["earlier-omission", "old-answer", "command", "middle"]),
+    expect.arrayContaining(["earlier-omission", "old-answer", "command"]),
   );
   expect(saved.history!.messages).toHaveLength(messages.length);
 });
@@ -76,4 +73,44 @@ it("keeps every message of a short thread", () => {
   const history = retrievableHandoffs([handoff(messages)])[0]!.history!;
   expect(history.messages).toEqual(messages);
   expect(history.omittedItems).toBe(1);
+});
+
+it("marks clipped requests for mandatory full retrieval and preserves trailing constraints", () => {
+  const request = item(
+    "user_message",
+    "long-request",
+    "Start goal. " + "detail ".repeat(10_000) + " Never publish without approval.",
+  );
+  const history = retrievableHandoffs([handoff([request])])[0]!.history!;
+  expect(history.messages[0]!.text).toContain("Never publish without approval.");
+  expect(history.messages[0]!.text).toContain("read the full request before acting");
+  expect(history.messages[0]!.text).toContain('"threadId":"handoff-brain"');
+  expect(history.messages[0]!.text).toContain('"itemId":"long-request"');
+  expect(history.coverage).toContain("Read any clipped user request in full before acting");
+  expect(retrievableHandoffs([{ ...handoff([]), history }])[0]!.history).toEqual(history);
+});
+
+it("preserves middle user constraints while a short conversation fits", () => {
+  const messages = [
+    item("user_message", "goal", "Build a draft."),
+    item("user_message", "constraint", "Never publish or delete the original."),
+    item("user_message", "middle", "Use the blue palette."),
+    item("user_message", "previous", "Add a chart."),
+    item("user_message", "latest", "Continue."),
+  ];
+  const history = retrievableHandoffs([handoff(messages)])[0]!.history!;
+  expect(history.messages).toEqual(messages);
+});
+
+it("identifies omitted user history as required recovery when requests exceed the capsule", () => {
+  const messages = Array.from({ length: 100 }, (_, index) =>
+    item("user_message", `request-${index}`, "Keep all earlier constraints. ".repeat(30)),
+  );
+  const history = retrievableHandoffs([handoff(messages)])[0]!.history!;
+  expect(history.coverage).toContain(
+    "earlier user requests are omitted and may contain constraints",
+  );
+  expect(history.coverage).toContain("Before acting, inspect user history");
+  expect(history.coverage).toContain('view:"messages"');
+  expect(history.messages.at(-1)!.itemId).toBe("request-99");
 });

@@ -1,1 +1,1 @@
-export * from "../../web/src/components/pseo/model.ts";
+export * from "@fdcode/shared/pseo";

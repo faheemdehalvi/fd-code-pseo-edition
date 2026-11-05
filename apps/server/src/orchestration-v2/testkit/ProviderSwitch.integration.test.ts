@@ -393,12 +393,13 @@ const waitForIdle = Effect.fn("ProviderSwitchTest.waitForIdle")(function* (
 
 describe("orchestration v2 provider switching", () => {
   it.live(
-    "delivers on-demand Brain results on resumed turns without replaying them on model changes",
+    "delivers a portable retrieval capsule to a fresh session on same-provider model changes",
     () =>
       Effect.scoped(
         Effect.gen(function* () {
           const cwd = yield* checkpointWorkspace("on-demand-brain-context");
           const capturedTurns = yield* Ref.make<ReadonlyArray<CapturedTurn>>([]);
+          const generation = yield* Ref.make(0);
           const prepared: Array<{ text: string; switching: boolean }> = [];
           const registry = ProviderAdapterRegistry.layerFromAdapters([
             makeTestAdapter({
@@ -408,6 +409,7 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: CODEX_MODEL_SELECTION,
               responseByRunOrdinal: {},
               capturedTurns,
+              nativeThreadGeneration: generation,
             }),
           ]);
           const brainMemory = {
@@ -477,9 +479,12 @@ describe("orchestration v2 provider switching", () => {
             assert.equal(turns[0]?.text, "Initial task");
             assert.include(turns[1]?.text, "RETRIEVED_DECISION");
             assert.include(turns[1]?.text, "migration decision");
-            assert.equal(turns[2]?.text, "Continue");
-            assert.equal(turns[2]?.nativeThreadId, turns[0]?.nativeThreadId);
-            assert.isFalse(prepared[2]?.switching);
+            assert.include(turns[2]?.text ?? "", "Continue");
+            assert.include(turns[2]?.text ?? "", "Initial task");
+            assert.include(turns[2]?.text ?? "", "Compact capsule");
+            assert.include(turns[2]?.text ?? "", "t3_thread_read");
+            assert.notEqual(turns[2]?.nativeThreadId, turns[0]?.nativeThreadId);
+            assert.isTrue(prepared[2]?.switching);
           }).pipe(
             Effect.provide(
               ProviderReplayHarness.layerWithRegistry(
@@ -571,7 +576,8 @@ describe("orchestration v2 provider switching", () => {
             responseByRunOrdinal: {},
             capturedTurns,
             ...(scenario.includes("retry") || scenario.includes("unsent") ? { failStartOnce } : {}),
-            ...(replaceNative ? { failResumeOnce, nativeThreadGeneration: generation } : {}),
+            nativeThreadGeneration: generation,
+            ...(replaceNative ? { failResumeOnce } : {}),
             ...(scenario.includes("reported-capacity")
               ? { initialContextUsage: { usedTokens: 999_999, maxTokens: 1_000_000 } }
               : {}),
@@ -801,23 +807,19 @@ describe("orchestration v2 provider switching", () => {
           if (scenario.includes("retry")) {
             const failed = yield* orchestrator.getThreadProjection(threadId);
             assert.equal(failed.runs.at(-1)?.status, "failed");
-            const failedUsage = failed.providerThreads.find(
-              (thread) => thread.providerInstanceId === CLAUDE_MODEL_SELECTION.instanceId,
-            )!.contextUsage;
-            if (reasoningScenario || scenario.includes("turn-usage")) {
-              assert.deepEqual(failedUsage, { usedTokens: 37_321, maxTokens: 258_400 });
-            } else {
-              assert.deepEqual(failedUsage, { usedTokens: 30_000, maxTokens: 1_000_000 });
-            }
+            const failedTarget = failed.providerThreads.find(
+              (thread) => thread.id === failed.runs.at(-1)?.providerThreadId,
+            )!;
+            assert.isNull(
+              failedTarget.contextUsage,
+              "a portable handoff must not reuse the previous native thread's token usage",
+            );
             if (reasoningScenario) {
-              const target = failed.providerThreads.find(
-                (thread) => thread.providerInstanceId === CLAUDE_MODEL_SELECTION.instanceId,
-              )!;
               yield* orchestrator.dispatch({
                 type: "provider-session.detach",
                 commandId: CommandId.make("detach-before-reasoning-retry"),
                 threadId,
-                providerSessionId: target.providerSessionId!,
+                providerSessionId: failedTarget.providerSessionId!,
               });
               yield* worker.drain();
             }
@@ -826,19 +828,13 @@ describe("orchestration v2 provider switching", () => {
           }
           if (reasoningScenario && replaceNative) {
             const replaced = yield* orchestrator.getThreadProjection(threadId);
-            assert.equal(
-              replaced.runs.at(-1)?.status,
-              scenario.includes("small") ? "failed" : "completed",
-            );
+            assert.equal(replaced.runs.at(-1)?.status, "completed");
             const target = replaced.providerThreads.find(
-              (thread) => thread.providerInstanceId === CLAUDE_MODEL_SELECTION.instanceId,
+              (thread) => thread.id === replaced.runs.at(-1)?.providerThreadId,
             )!;
             assert.isNull(target.contextUsage);
             assert.equal(yield* Ref.get(generation), 2);
-            assert.equal(
-              (yield* Ref.get(capturedTurns)).at(-1)!.driver,
-              scenario.includes("small") ? CODEX_DRIVER : CLAUDE_DRIVER,
-            );
+            assert.equal((yield* Ref.get(capturedTurns)).at(-1)!.driver, CLAUDE_DRIVER);
             return;
           }
           if (replaceNative) {
@@ -883,40 +879,32 @@ describe("orchestration v2 provider switching", () => {
           const projection = yield* orchestrator.getThreadProjection(threadId);
           assert.equal(projection.runs.at(-1)?.status, "completed");
           if (priorImages) {
-            const handoff = projection.contextHandoffs.at(-1)!;
             const context = scenario.endsWith("-native")
               ? yield* encodeJson(yield* Ref.get(injectedHistory))
               : (yield* Ref.get(capturedTurns)).at(-1)!.text;
-            const shouldFit =
-              turnUsageScenario ||
-              scenario.startsWith("imported") ||
-              scenario.includes("telemetry") ||
-              scenario.includes("unsent") ||
-              replaceNative;
             const sourceText =
               `${replaceNative ? "Another" : "New"} source constraint ` + "q".repeat(9_000);
             const sourceItem = projection.turnItems.find(
               (item) => item.type === "user_message" && item.text === sourceText,
             )!;
             assert.isDefined(sourceItem);
-            if (shouldFit) {
-              assert.include(context, sourceText);
-              assert.include(
-                projection.contextHandoffs
-                  .filter(
-                    (record) =>
-                      record.targetRunId ===
-                      (scenario.includes("retry")
-                        ? projection.runs.find((run) => run.ordinal === targetOrdinal)!.id
-                        : projection.runs.at(-1)!.id),
-                  )
-                  .flatMap((record) => record.delivery?.itemIds ?? []),
-                sourceItem.id,
-              );
-            } else {
-              assert.notInclude(context, "q".repeat(9_000));
-              assert.isAbove(handoff.delivery!.omittedItemIds!.length, 0);
-            }
+            assert.include(context, sourceText.slice(0, 100));
+            assert.notInclude(context, sourceText);
+            assert.include(context, "read the full request before acting");
+            assert.include(context, "t3_thread_read");
+            assert.include(context, sourceItem.id);
+            assert.include(
+              projection.contextHandoffs
+                .filter(
+                  (record) =>
+                    record.targetRunId ===
+                    (scenario.includes("retry")
+                      ? projection.runs.find((run) => run.ordinal === targetOrdinal)!.id
+                      : projection.runs.at(-1)!.id),
+                )
+                .flatMap((record) => record.delivery?.itemIds ?? []),
+              sourceItem.id,
+            );
             const latestRun = projection.runs.at(-1)!;
             const latestAttempt = projection.attempts.find(
               (attempt) => attempt.id === latestRun.activeAttemptId,
@@ -926,12 +914,10 @@ describe("orchestration v2 provider switching", () => {
             )!;
             assert.equal(latestAttempt.nativeThreadId, target.nativeThreadRef!.nativeId);
             if (turnUsageScenario) {
-              if (replaceNative) assert.isNull(target.contextUsage);
-              else
-                assert.deepEqual(target.contextUsage, { usedTokens: 37_321, maxTokens: 258_400 });
+              assert.isNull(target.contextUsage);
               assert.lengthOf((yield* Ref.get(capturedTurns)).at(-1)!.attachments, 2);
             }
-            if (replaceNative) assert.equal(yield* Ref.get(generation), 2);
+            if (replaceNative) assert.equal(yield* Ref.get(generation), 3);
             return;
           }
           const handoff = projection.contextHandoffs.at(-1)!;
@@ -1906,11 +1892,12 @@ describe("orchestration v2 provider switching", () => {
     ),
   );
 
-  it.live("resumes a queued account switch without requiring a portable handoff", () =>
+  it.live("uses portable capsules for a queued account round trip", () =>
     Effect.scoped(
       Effect.gen(function* () {
         const cwd = yield* checkpointWorkspace("queued-account-switch");
         const capturedTurns = yield* Ref.make<ReadonlyArray<CapturedTurn>>([]);
+        const generation = yield* Ref.make(0);
         const started = yield* Deferred.make<void>();
         const alternateSelection: ModelSelection = {
           ...CODEX_MODEL_SELECTION,
@@ -1918,7 +1905,7 @@ describe("orchestration v2 provider switching", () => {
         };
         const alternateCapabilities = {
           ...CodexProviderCapabilitiesV2,
-          canConsumeHandoffSummaries: false,
+          canConsumeHandoffSummaries: true,
         };
         const adapters = [
           makeTestAdapter({
@@ -1928,6 +1915,7 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             responseByRunOrdinal: {},
             capturedTurns,
+            nativeThreadGeneration: generation,
             holdFirstTurn: started,
           }),
           makeTestAdapter({
@@ -1937,6 +1925,7 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: alternateSelection,
             responseByRunOrdinal: { 2: "Alternate account complete" },
             capturedTurns,
+            nativeThreadGeneration: generation,
           }),
         ];
         const layerRegistry = Layer.succeed(
@@ -2013,10 +2002,22 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: alternateSelection,
             dispatchMode: { type: "queue_after_active" },
           });
+          yield* orchestrator.dispatch({
+            type: "message.dispatch",
+            createdBy: "user",
+            creationSource: "web",
+            commandId: CommandId.make("command:queued-account-switch:return"),
+            threadId: queuedThreadId,
+            messageId: MessageId.make("message:queued-account-switch:return"),
+            text: "Return to first account",
+            attachments: [],
+            modelSelection: CODEX_MODEL_SELECTION,
+            dispatchMode: { type: "queue_after_active" },
+          });
           const queued = yield* orchestrator.getThreadProjection(queuedThreadId);
           assert.deepEqual(
             queued.runs.map((run) => run.status),
-            ["running", "queued"],
+            ["running", "queued", "queued"],
           );
           assert.equal(queued.thread.providerInstanceId, CODEX_MODEL_SELECTION.instanceId);
           const sourceNativeRef = queued.providerThreads.find(
@@ -2042,7 +2043,7 @@ describe("orchestration v2 provider switching", () => {
             Stream.filter(
               (event) =>
                 event.event.type === "run.updated" &&
-                event.event.runId === queued.runs[1]?.id &&
+                event.event.runId === queued.runs[2]?.id &&
                 event.event.payload.status === "completed",
             ),
             Stream.runHead,
@@ -2052,7 +2053,11 @@ describe("orchestration v2 provider switching", () => {
           const targetNativeRef = delivered.providerThreads.find(
             (providerThread) => providerThread.id === delivered.runs[1]?.providerThreadId,
           )?.nativeThreadRef;
-          assert.deepEqual(targetNativeRef, sourceNativeRef);
+          assert.notDeepEqual(targetNativeRef, sourceNativeRef);
+          const returnedNativeRef = delivered.providerThreads.find(
+            (providerThread) => providerThread.id === delivered.runs[2]?.providerThreadId,
+          )?.nativeThreadRef;
+          assert.notDeepEqual(returnedNativeRef, sourceNativeRef);
           return delivered;
         }).pipe(
           Effect.provide(
@@ -2078,13 +2083,17 @@ describe("orchestration v2 provider switching", () => {
           [
             [CODEX_MODEL_SELECTION.instanceId, "completed"],
             [alternateSelection.instanceId, "completed"],
+            [CODEX_MODEL_SELECTION.instanceId, "completed"],
           ],
         );
-        assert.lengthOf(projection.contextHandoffs, 0);
-        assert.deepEqual(
-          (yield* Ref.get(capturedTurns)).map((turn) => turn.text),
-          ["First account turn", "Alternate account turn"],
-        );
+        assert.lengthOf(projection.contextHandoffs, 2);
+        const turns = yield* Ref.get(capturedTurns);
+        assert.equal(turns[0]?.text, "First account turn");
+        assert.include(turns[1]?.text ?? "", "Alternate account turn");
+        assert.include(turns[1]?.text ?? "", "Compact capsule");
+        assert.include(turns[1]?.text ?? "", "t3_thread_read");
+        assert.include(turns[2]?.text ?? "", "Return to first account");
+        assert.include(turns[2]?.text ?? "", "Compact capsule");
       }),
     ),
   );

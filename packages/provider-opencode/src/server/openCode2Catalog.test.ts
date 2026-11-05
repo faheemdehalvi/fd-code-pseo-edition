@@ -54,7 +54,103 @@ const readCatalog = (
     Effect.provide(OpenCode2Client.layer.pipe(Layer.provide(layerServerReplying(bodies, hanging)))),
   );
 
+const withModelReplies = (
+  replies: Array<{ readonly status: number; readonly body: string }>,
+  onRequest: () => void,
+) =>
+  OpenCode2Client.layer.pipe(
+    Layer.provide(
+      Layer.succeed(
+        HttpClient.HttpClient,
+        HttpClient.make((request) =>
+          Effect.sync(() => {
+            const isModelRequest = new URL(request.url).pathname === "/api/model";
+            if (isModelRequest) onRequest();
+            const reply = isModelRequest
+              ? replies.length > 1
+                ? replies.shift()!
+                : replies[0]!
+              : { status: 200, body: PROVIDERS_BODY };
+            return HttpClientResponse.fromWeb(
+              request,
+              new Response(reply.body, {
+                status: reply.status,
+                headers: { "content-type": "application/json" },
+              }),
+            );
+          }),
+        ),
+      ),
+    ),
+  );
+
+const readConnectedCatalog = Effect.gen(function* () {
+  const opencode = yield* OpenCode2Client.OpenCode2Client;
+  const { client } = yield* opencode.connect({
+    baseUrl: "http://127.0.0.1:4096",
+    password: "secret",
+  });
+  return yield* loadOpenCode2Catalog(client, "/project");
+});
+
+const pluginsStarting = {
+  status: 503,
+  body: '{"_tag":"ServiceUnavailableError","message":"Location plugins did not finish activating"}',
+};
+
 describe("loadOpenCode2Catalog", () => {
+  it.effect("recovers when location plugins finish activating after the server starts", () =>
+    Effect.gen(function* () {
+      let requests = 0;
+      const reading = yield* readConnectedCatalog.pipe(
+        Effect.provide(
+          withModelReplies(
+            [
+              ...Array.from({ length: 10 }, () => pluginsStarting),
+              { status: 200, body: MODELS_BODY },
+            ],
+            () => requests++,
+          ),
+        ),
+        Effect.forkChild,
+      );
+      yield* TestClock.adjust("6 seconds");
+      assert.strictEqual((yield* Fiber.join(reading)).length, 2);
+      assert.strictEqual(requests, 11);
+    }).pipe(Effect.provide(TestClock.layer())),
+  );
+
+  it.effect("bounds retries when location plugins never become ready", () =>
+    Effect.gen(function* () {
+      let requests = 0;
+      const reading = yield* readConnectedCatalog.pipe(
+        Effect.provide(withModelReplies([pluginsStarting], () => requests++)),
+        Effect.flip,
+        Effect.forkChild,
+      );
+      yield* TestClock.adjust("20 seconds");
+      assert.strictEqual((yield* Fiber.join(reading)).operation, "model.list");
+      assert.strictEqual(requests, 40);
+    }).pipe(Effect.provide(TestClock.layer())),
+  );
+
+  it.effect("does not retry a rejected server password", () =>
+    Effect.gen(function* () {
+      let requests = 0;
+      const error = yield* readConnectedCatalog.pipe(
+        Effect.provide(
+          withModelReplies(
+            [{ status: 401, body: '{"_tag":"UnauthorizedError","message":"Unauthorized"}' }],
+            () => requests++,
+          ),
+        ),
+        Effect.flip,
+      );
+      assert.strictEqual(error.operation, "model.list");
+      assert.strictEqual(requests, 1);
+    }),
+  );
+
   it.effect("names the provider each listed model came from", () =>
     Effect.gen(function* () {
       const models = yield* readCatalog({

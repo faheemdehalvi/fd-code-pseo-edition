@@ -162,3 +162,43 @@ it.layer(layerTest)("ContextHandoffService legacy import", (it) => {
     }),
   );
 });
+
+it.layer(layerTest)("provider retrieval capsule", (it) => {
+  it.effect("retains a recoverable oversized latest request before selecting the budget", () =>
+    Effect.gen(function* () {
+      const service = yield* ContextHandoffService.ContextHandoffServiceV2;
+      const handoff = yield* service.prepareProviderHandoff({
+        threadId: ThreadId.make("thread:legacy-context"),
+        targetRunId: RunId.make("run:target"),
+        transferId: null,
+        fromProviderThreadIds: [],
+        toProviderThreadId: ProviderThreadId.make("provider-thread:target"),
+        fromProviderInstanceId: ProviderInstanceId.make("codex"),
+        toProviderInstanceId: ProviderInstanceId.make("claude"),
+        strategy: "full_thread_summary",
+        coveredRunOrdinals: { from: 1, to: 1 },
+        items: [
+          importedItem({ role: "user", id: "goal", text: "Keep this local.", ordinal: 1 }),
+          importedItem({
+            role: "assistant",
+            id: "old",
+            text: "Old output ".repeat(10000),
+            ordinal: 2,
+          }),
+          importedItem({
+            role: "user",
+            id: "latest",
+            text: "Current task. " + "detail ".repeat(10000) + " Never publish.",
+            ordinal: 3,
+          }),
+        ],
+        createdAt: DateTime.makeUnsafe("2026-10-29T00:00:00Z"),
+      });
+      assert.include(handoff.summaryText, "Never publish.");
+      assert.include(handoff.summaryText, "read the full request before acting");
+      assert.include(handoff.summaryText, '"itemId":"turn-item:latest"');
+      assert.isBelow(Buffer.byteLength(handoff.summaryText), 16000);
+      assert.include(handoff.history?.coverage ?? "", "Compact capsule");
+    }),
+  );
+});

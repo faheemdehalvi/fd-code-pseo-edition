@@ -104,6 +104,7 @@ export const layer: Layer.Layer<
           );
           const selectionTransition =
             current.instanceId === targetModelSelection.instanceId &&
+            !modelChanged &&
             !modelSelectionsEqual(current, targetModelSelection) &&
             Option.isSome(targetAdapter) &&
             Option.isSome(currentInstance) &&
@@ -186,7 +187,10 @@ export const layer: Layer.Layer<
                 return session.id === currentSession?.id;
               }
               if (transition.type === "create_with_handoff") {
-                return session.providerInstanceId !== targetModelSelection.instanceId;
+                return (
+                  session.id === currentSession?.id ||
+                  session.providerInstanceId !== targetModelSelection.instanceId
+                );
               }
               return false;
             })
@@ -194,7 +198,8 @@ export const layer: Layer.Layer<
           return {
             instanceChanged,
             modelChanged,
-            targetProviderThreadId: targetProviderThread?.id ?? null,
+            targetProviderThreadId:
+              transition.type === "create_with_handoff" ? null : (targetProviderThread?.id ?? null),
             releaseProviderSessionIds,
             transition,
           };

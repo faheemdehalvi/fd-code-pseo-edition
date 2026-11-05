@@ -50,6 +50,20 @@ describe("BrainClient", () => {
     });
   });
 
+  it.each([
+    "brain_structure_search",
+    "brain_structure_outline",
+    "brain_structure_read",
+    "brain_structure_status",
+  ])("allows %s through the read-only Brain interface", async (name) => {
+    const fetch = responding({ content: [{ type: "text", text: "section evidence" }] });
+    const result = await createBrainClient({ fetch, loadToken }).callTool(name, {
+      query: "decision",
+    });
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(String(fetch.mock.calls[0]![1]?.body)).params.name).toBe(name);
+  });
+
   it("rejects mutations and inbox delivery updates through the model-facing read interface", async () => {
     const fetch = responding({});
     const tokenLoader = vi.fn(loadToken);
@@ -193,6 +207,69 @@ describe("BrainClient", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(await pending).toMatchObject({ ok: false, error: { code: "timeout" } });
     expect(fetch.mock.calls[0]![1]?.signal?.aborted).toBe(true);
+  });
+
+  it("allows a cold structure search to complete after the ordinary five-second deadline", async () => {
+    vi.useFakeTimers();
+    const fetch: typeof globalThis.fetch = async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { id: number };
+      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      return Response.json({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          content: [{ type: "text", text: "cold section evidence" }],
+        },
+      });
+    };
+    const pending = createBrainClient({ fetch, loadToken }).callTool("brain_structure_search", {
+      query: "checkpoint",
+    });
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect(await pending).toMatchObject({
+      ok: true,
+      value: { content: [{ text: "cold section evidence" }] },
+    });
+  });
+
+  it("bounds the default structure-search deadline at fifteen seconds", async () => {
+    vi.useFakeTimers();
+    const fetch: typeof globalThis.fetch = () => new Promise(() => {});
+    let settled = false;
+    const pending = createBrainClient({ fetch, loadToken })
+      .callTool("brain_structure_search", { query: "checkpoint" })
+      .then((result) => {
+        settled = true;
+        return result;
+      });
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await pending).toMatchObject({ ok: false, error: { code: "timeout" } });
+  });
+
+  it.each(["health", "brain_search", "brain_structure_status"])(
+    "retains the five-second default deadline for %s",
+    async (name) => {
+      vi.useFakeTimers();
+      const fetch: typeof globalThis.fetch = () => new Promise(() => {});
+      const client = createBrainClient({ fetch, loadToken });
+      const pending =
+        name === "health" ? client.health() : client.callTool(name, { query: "checkpoint" });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(await pending).toMatchObject({ ok: false, error: { code: "timeout" } });
+    },
+  );
+
+  it("honors an explicit caller deadline for structure search", async () => {
+    vi.useFakeTimers();
+    const fetch: typeof globalThis.fetch = () => new Promise(() => {});
+    const pending = createBrainClient({ fetch, loadToken, timeoutMs: 100 }).callTool(
+      "brain_structure_search",
+      { query: "checkpoint" },
+    );
+    await vi.advanceTimersByTimeAsync(100);
+    expect(await pending).toMatchObject({ ok: false, error: { code: "timeout" } });
   });
 
   it("includes credential loading in the deadline and prevents a late outbound request", async () => {

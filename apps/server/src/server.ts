@@ -1,6 +1,8 @@
 import * as ProviderEventLoggers from "@fdcode/provider-core/server/ProviderEventLoggers";
 import * as BetaHttp from "./beta/http.ts";
 import * as GeneralChat from "./beta/GeneralChat.ts";
+import * as AppChat from "./beta/AppChat.ts";
+import * as PseoStore from "./beta/PseoStore.ts";
 import * as GeneralChatPositions from "./orchestration-v2/TurnItemPositionStore.ts";
 import { BetaBrain } from "./beta/Brain.ts";
 import { BetaArtsie } from "./beta/Artsie.ts";
@@ -691,6 +693,7 @@ const layerMakeRoutes = Layer.mergeAll(
       Layer.provide(
         BetaHttp.layer.pipe(
           Layer.provide(BetaBrain.layer),
+          Layer.provide(AppChat.layer),
           Layer.provide(
             GeneralChat.layer.pipe(
               Layer.provide(RuntimeLayer.layerEventSink),
@@ -715,6 +718,7 @@ const layerMakeRoutes = Layer.mergeAll(
     McpHttpServer.layer,
     McpHttpServer.layerBrainToolkit,
     McpHttpServer.layerArtsieToolkit,
+    McpHttpServer.layerPseoToolkit,
   ).pipe(
     Layer.provide(RuntimeLayer.layerBrainMemory),
     Layer.provide(BetaBrain.layer),
@@ -724,6 +728,8 @@ const layerMakeRoutes = Layer.mergeAll(
     Layer.provide(McpOAuth.layerMcpClientAuthenticator),
   ),
 ).pipe(
+  // One store for the panel's HTTP routes and the agent tools, so writes share its lock.
+  Layer.provide(PseoStore.layer),
   Layer.provide(
     PullRequestReviewGuideService.layer.pipe(Layer.provide(PullRequestReviewGuides.layer)),
   ),
@@ -902,7 +908,9 @@ const layerMakeServer = Layer.unwrap(
                     ),
                   }),
                   Effect.tap((recovered) =>
-                    recovered ? Effect.logInfo("FD CODE Connect managed tunnel recovered") : Effect.void,
+                    recovered
+                      ? Effect.logInfo("FD CODE Connect managed tunnel recovered")
+                      : Effect.void,
                   ),
                   Effect.catchCause((cause) =>
                     Cause.hasInterrupts(cause)
@@ -920,9 +928,9 @@ const layerMakeServer = Layer.unwrap(
             const wantsCliLink = hasCloudPublicConfig
               ? yield* CloudCliState.readCliDesiredCloudLink.pipe(
                   Effect.catch((cause) =>
-                    Effect.logWarning("Failed to read the desired FD CODE Connect link", { cause }).pipe(
-                      Effect.as(false),
-                    ),
+                    Effect.logWarning("Failed to read the desired FD CODE Connect link", {
+                      cause,
+                    }).pipe(Effect.as(false)),
                   ),
                 )
               : false;
@@ -983,9 +991,12 @@ const layerMakeServer = Layer.unwrap(
               Effect.catchCause((cause) =>
                 Cause.hasInterrupts(cause)
                   ? Effect.interrupt
-                  : Effect.logWarning("Failed to register FD CODE Connect managed tunnel recovery", {
-                      cause,
-                    }).pipe(Effect.as({ status: "unavailable" as const })),
+                  : Effect.logWarning(
+                      "Failed to register FD CODE Connect managed tunnel recovery",
+                      {
+                        cause,
+                      },
+                    ).pipe(Effect.as({ status: "unavailable" as const })),
               ),
             );
             // Spread those registrations so an auto-update wave does not hit
@@ -1027,9 +1038,12 @@ const layerMakeServer = Layer.unwrap(
                       : Effect.logInfo("FD CODE Connect desired link reconciled on startup"),
                   ),
                   Effect.catch((cause) =>
-                    Effect.logWarning("Failed to reconcile FD CODE Connect desired link on startup", {
-                      cause,
-                    }).pipe(Effect.as(null)),
+                    Effect.logWarning(
+                      "Failed to reconcile FD CODE Connect desired link on startup",
+                      {
+                        cause,
+                      },
+                    ).pipe(Effect.as(null)),
                   ),
                 );
               if (reconciledMode === "managed") {

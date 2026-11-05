@@ -30,3 +30,8 @@ export function acpSelectionTransition(
   }
   return { type: "apply_on_next_turn" };
 }
+
+/** A different model starts with a portable capsule rather than a native transcript. */
+export function requiresRetrievalHandoff(current: ModelSelection, target: ModelSelection): boolean {
+  return current.instanceId !== target.instanceId || current.model !== target.model;
+}

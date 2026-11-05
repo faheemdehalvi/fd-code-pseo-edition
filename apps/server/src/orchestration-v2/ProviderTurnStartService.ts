@@ -1129,9 +1129,7 @@ export const layer: Layer.Layer<
                   }),
                 ];
           const delivery = yield* deliverContextHandoffs({
-            handoffs: Option.isSome(brainMemory)
-              ? retrievableHandoffs([...effectiveHandoffs, ...retryHandoff])
-              : [...effectiveHandoffs, ...retryHandoff],
+            handoffs: retrievableHandoffs([...effectiveHandoffs, ...retryHandoff]),
             deferInline: compact,
             providerThread: runningProviderThread,
             budget: Effect.gen(function* () {

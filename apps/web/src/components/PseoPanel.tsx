@@ -1,227 +1,218 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { onOpenPseoWorkspace } from "./pseo/panelEvents";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useStableCallback } from "../hooks/useStableCallback";
+import { useNavigate } from "@tanstack/react-router";
 import { FileTextIcon, MessageSquareIcon } from "lucide-react";
-import { scopeProjectRef, scopedProjectKey } from "@fdcode/client-runtime/environment";
+import { scopeThreadRef } from "@fdcode/client-runtime/environment";
+import { AuthOrchestrationOperateScope } from "@fdcode/contracts";
 
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useNewThreadHandler } from "../hooks/useHandleNewThread";
-import { useProjects } from "../state/entities";
+import { usePrimaryEnvironmentId } from "../state/environments";
+import { waitForThreadShell } from "../state/entities";
+import { useEnvironmentScope } from "../state/session";
+import { openPseoChat } from "../rpc/pseo";
 import { ArtsiePanel } from "./ArtsiePanel";
+import { RenderErrorBoundary } from "./RenderErrorBoundary";
 import { Button } from "./ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogPopup, DialogTitle } from "./ui/dialog";
 import { buildPseoAgentPrompt } from "./pseo/agentHandoff";
-import { loadWorkspace, parseWorkspace, saveWorkspace, STORAGE_KEY } from "./pseo/storage";
+import { openPseoWorkspace } from "./pseo/panelEvents";
+import { usePseoWorkspace } from "./pseo/usePseoWorkspace";
+import { usePseoWorkspaceLayout } from "./pseo/workspaceContext";
 
 const PseoApp = lazy(() => import("./pseo/App").then((module) => ({ default: module.App })));
 
-function PseoWorkspace({ onClose }: { onClose: () => void }) {
-  const projects = useProjects();
-  const handleNewThread = useNewThreadHandler();
-  const [loaded] = useState(() => {
+const CHAT_GUIDANCE = [
+  "Work with me in the native pSEO workspace. Use t3_pseo_workspace to read its current articles and t3_pseo_article to read an article in full.",
+  "Use the t3_pseo_create_article, t3_pseo_update_article, t3_pseo_add_evidence, t3_pseo_move_stage and t3_pseo_run_checks tools to save work directly into the workspace. Discover the exact tool schemas before calling them.",
+  "Start with a brief. Only the user can approve it using Approve brief in pSEO. After approval, gather primary sources, attach evidence, move to writing and save a Markdown draft. Do not invent research, SEO metrics or checks, or publish anything.",
+  "For media, discover the existing ARTsie tools and use them when useful. Preserve originals and verify exported files.",
+].join("\n\n");
+
+function PseoWorkspace() {
+  const { workspace, onChange, error, saving, reloadServer } = usePseoWorkspace();
+  const { chatRef, setChatRef, setChatMount } = usePseoWorkspaceLayout();
+  const environmentId = usePrimaryEnvironmentId();
+  const canOperate = useEnvironmentScope(environmentId, AuthOrchestrationOperateScope);
+  const navigate = useNavigate();
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const openChat = useStableCallback(async (fresh: boolean = false) => {
+    if (!environmentId || !canOperate || openingRef.current) return;
+    openingRef.current = true;
+    setOpening(true);
+    setChatError(null);
     try {
-      return { workspace: loadWorkspace(window.localStorage), error: null };
+      const result = await openPseoChat(fresh);
+      const ref = scopeThreadRef(environmentId, result.threadId);
+      const ready = await waitForThreadShell(ref);
+      if (!ready) throw new Error("Chat was created but has not loaded yet. Try again.");
+      if (!mounted.current) return;
+      const store = useComposerDraftStore.getState();
+      if (!store.getComposerDraft(ref)?.prompt.trim()) store.setPrompt(ref, CHAT_GUIDANCE);
+      setChatRef(null);
+      await navigate({
+        to: "/$environmentId/$threadId",
+        params: { environmentId, threadId: result.threadId },
+      });
+      if (mounted.current) setChatRef(ref);
     } catch (cause) {
-      return {
-        workspace: null,
-        error:
-          cause instanceof Error ? cause.message : "The saved pSEO workspace could not be read.",
-      };
+      if (mounted.current)
+        setChatError(cause instanceof Error ? cause.message : "Could not open pSEO chat.");
+    } finally {
+      openingRef.current = false;
+      if (mounted.current) setOpening(false);
     }
   });
-  const [workspace, setWorkspace] = useState(loaded.workspace);
-  const [storageError, setStorageError] = useState<string | null>(null);
-  const [handoffError, setHandoffError] = useState<string | null>(null);
-  const [projectKey, setProjectKey] = useState("");
-  const [busy, setBusy] = useState(false);
-  const visibleProjects = projects.filter((project) => project.isScratch !== true);
-  const project = visibleProjects.find(
-    (candidate) =>
-      scopedProjectKey(scopeProjectRef(candidate.environmentId, candidate.id)) === projectKey,
-  );
+
+  useEffect(() => {
+    if (environmentId && canOperate && !chatRef && !openingRef.current && !chatError)
+      void openChat();
+  }, [environmentId, canOperate, chatRef, chatError, openChat]);
+
   const article =
     workspace?.articles.find((candidate) => candidate.id === workspace.selectedId) ??
     workspace?.articles[0];
-
-  const prepareAgentDraft = async () => {
-    if (!project || !workspace || !article || busy) return;
-    setBusy(true);
-    setHandoffError(null);
-    try {
-      const opened = await handleNewThread(scopeProjectRef(project.environmentId, project.id));
-      if (!opened)
-        throw new Error("The agent draft could not be opened. Choose the project and try again.");
-      const store = useComposerDraftStore.getState();
-      const existing = store.getComposerDraft(opened.draftId)?.prompt ?? "";
-      const prompt = buildPseoAgentPrompt(workspace, article);
-      store.setPrompt(opened.draftId, existing.trim() ? `${existing}\n\n${prompt}` : prompt);
-      onClose();
-    } catch (cause) {
-      setHandoffError(
-        cause instanceof Error ? cause.message : "The agent draft could not be prepared.",
-      );
-    } finally {
-      setBusy(false);
-    }
+  const attachArticle = () => {
+    if (!workspace || !article || !chatRef) return;
+    const store = useComposerDraftStore.getState();
+    const existing = store.getComposerDraft(chatRef)?.prompt ?? "";
+    const context = `${CHAT_GUIDANCE}\n\n${buildPseoAgentPrompt(workspace, article)}`;
+    store.setPrompt(chatRef, existing.trim() ? `${existing}\n\n${context}` : context);
   };
 
-  if (!workspace)
-    return (
-      <div className="p-6">
-        <h2 className="text-lg font-semibold">Your saved pSEO workspace needs attention</h2>
-        <p className="mt-2 text-sm" role="alert">
-          {loaded.error}
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The saved data has been left untouched. Download it for recovery, or restore a valid
-          workspace backup.
-        </p>
-        <div className="mt-4">
-          <Button
-            variant="outline"
-            onClick={() => {
-              try {
-                const raw = window.localStorage.getItem(STORAGE_KEY);
-                if (raw === null) throw new Error("No saved workspace is available to download.");
-                const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = "pseo-workspace-recovery.json";
-                link.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-              } catch (cause) {
-                setStorageError(
-                  cause instanceof Error ? cause.message : "Could not read saved data.",
-                );
+  return (
+    <div className="grid h-full min-h-0 grid-cols-1 overflow-auto lg:grid-cols-[minmax(0,3fr)_minmax(25rem,2fr)] lg:overflow-hidden">
+      <div className="min-h-[32rem] min-w-0 overflow-auto [container-name:pseo-editor] [container-type:inline-size] lg:min-h-0">
+        {error && (
+          <div className="flex flex-wrap items-center gap-2 p-3" role="alert">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button variant="outline" size="compact" onClick={() => void reloadServer()}>
+              Reload saved workspace
+            </Button>
+          </div>
+        )}
+        {workspace ? (
+          <Suspense fallback={<p className="p-6 text-sm">Opening pSEO workspace…</p>}>
+            <PseoApp
+              workspace={workspace}
+              onChange={onChange}
+              storageError={error}
+              hostActions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="compact"
+                    disabled={!article || !chatRef || !canOperate}
+                    onClick={attachArticle}
+                  >
+                    <MessageSquareIcon /> Add article to chat
+                  </Button>
+                  <ArtsiePanel />
+                  <span className="text-xs text-muted-foreground" role="status">
+                    {saving ? "Saving…" : "Shared with your agents"}
+                  </span>
+                </div>
               }
-            }}
-          >
-            Download recovery copy
-          </Button>
-        </div>
-        <label className="mt-4 block text-sm">
-          Restore a backup (replaces this saved workspace)
-          <input
-            type="file"
-            accept=".json,application/json"
-            className="mt-2 block"
-            onChange={async (event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              try {
-                const restored = parseWorkspace(await file.text());
-                saveWorkspace(window.localStorage, restored);
-                setWorkspace(restored);
-                setStorageError(null);
-              } catch (cause) {
-                setStorageError(
-                  cause instanceof Error ? cause.message : "Could not restore this backup.",
-                );
-              }
-            }}
-          />
-        </label>
-        {storageError && (
-          <p className="mt-2 text-sm" role="alert">
-            {storageError}
+            />
+          </Suspense>
+        ) : (
+          <p className="p-6 text-sm">
+            {error ? "Reconnect to load your saved workspace." : "Loading your workspace…"}
           </p>
         )}
       </div>
-    );
-
-  return (
-    <Suspense fallback={<p className="p-6 text-sm">Opening pSEO workspace…</p>}>
-      <PseoApp
-        workspace={workspace}
-        storageError={storageError ?? handoffError}
-        onChange={(next) => {
-          setWorkspace(next);
-          try {
-            saveWorkspace(window.localStorage, next);
-            setStorageError(null);
-          } catch {
-            setStorageError(
-              "Changes are only in memory. Download a workspace backup before closing pSEO.",
-            );
-          }
-        }}
-        hostActions={
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-xs">
-              Agent project
-              <select
-                aria-label="Project for pSEO agent work"
-                value={projectKey}
-                onChange={(event) => setProjectKey(event.target.value)}
-                className="max-w-48 rounded border border-input bg-background px-2 py-1 text-foreground"
-              >
-                <option value="">
-                  {visibleProjects.length ? "Choose a project" : "Add a project first"}
-                </option>
-                {visibleProjects.map((candidate) => {
-                  const key = scopedProjectKey(
-                    scopeProjectRef(candidate.environmentId, candidate.id),
-                  );
-                  return (
-                    <option key={key} value={key}>
-                      {candidate.title} · {candidate.workspaceRoot}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-            <Button
-              variant="outline"
-              size="compact"
-              disabled={!project || !article || busy}
-              onClick={() => void prepareAgentDraft()}
-              aria-description="Prepare a prompt in the normal composer. Review it and choose your provider before sending."
-            >
-              <MessageSquareIcon />
-              {busy ? "Preparing…" : "Work with agent"}
+      <section
+        className="flex h-[40rem] min-h-0 min-w-0 flex-col border-t bg-background text-foreground lg:h-auto lg:border-l lg:border-t-0"
+        aria-label="pSEO agent chat"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+          <span className="text-sm font-medium">pSEO chat</span>
+          <Button
+            variant="ghost"
+            size="compact"
+            disabled={opening || !canOperate}
+            onClick={() => void openChat(true)}
+          >
+            New chat
+          </Button>
+        </div>
+        {chatError && (
+          <div className="p-3" role="alert">
+            <p className="text-sm text-destructive">{chatError}</p>
+            <Button variant="outline" size="compact" onClick={() => void openChat()}>
+              Retry chat
             </Button>
-            <span>
-              <ArtsiePanel />
-              <span className="text-3xs text-muted-foreground">Primary host</span>
-            </span>
           </div>
-        }
-      />
-    </Suspense>
+        )}
+        {!chatRef && !chatError && (
+          <p className="p-3 text-sm text-muted-foreground">
+            {canOperate
+              ? "Opening FD CODE chat…"
+              : "Connect with permission to operate threads to chat."}
+          </p>
+        )}
+        <div ref={setChatMount} className="min-h-0 flex-1" />
+      </section>
+    </div>
   );
 }
 
 export function PseoPanel() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => onOpenPseoWorkspace(() => setOpen(true)), []);
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="compact"
-        onClick={() => setOpen(true)}
-        aria-label="Open pSEO content workspace"
-      >
-        <FileTextIcon />
-        pSEO
-      </Button>
-      {open && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogPopup className="flex h-[min(94dvh,70rem)] w-[min(98vw,100rem)] max-w-none flex-col overflow-hidden">
-            <div className="shrink-0 pb-3 pr-8">
-              <DialogHeader>
-                <DialogTitle>pSEO content workspace</DialogTitle>
-                <DialogDescription>
-                  Briefs, evidence and writing, with your FD CODE agents and ARTsie media tools.
-                  Agent work opens as a draft for you to review and send.
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              <PseoWorkspace onClose={() => setOpen(false)} />
-            </div>
-          </DialogPopup>
-        </Dialog>
-      )}
-    </>
+    <Button
+      variant="ghost"
+      size="compact"
+      onClick={openPseoWorkspace}
+      aria-label="Open pSEO content workspace"
+    >
+      <FileTextIcon /> pSEO
+    </Button>
+  );
+}
+
+export function PseoWorkspaceHost() {
+  const { open, setOpen } = usePseoWorkspaceLayout();
+  if (!open) return null;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next, details) => {
+        // The routed chat's popovers portal outside this dialog's React ancestry.
+        if (details.reason !== "outside-press") setOpen(next);
+      }}
+      modal={false}
+    >
+      <DialogPopup className="flex h-[min(94dvh,70rem)] w-[min(98vw,110rem)] max-w-none flex-col overflow-hidden">
+        <div className="shrink-0 pb-3 pr-8">
+          <DialogHeader>
+            <DialogTitle>pSEO content workspace</DialogTitle>
+            <DialogDescription>
+              Plan, research and write with your FD CODE agents. Approve the brief before drafting,
+              then review the result before publishing.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <RenderErrorBoundary
+            fallback={
+              <p className="p-6 text-sm" role="alert">
+                pSEO could not load. Reopen the workspace to try again.
+              </p>
+            }
+          >
+            <PseoWorkspace />
+          </RenderErrorBoundary>
+        </div>
+      </DialogPopup>
+    </Dialog>
   );
 }

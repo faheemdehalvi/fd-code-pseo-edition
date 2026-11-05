@@ -87,6 +87,7 @@ export class DesktopEnvironment extends Context.Service<
 >()("@fdcode/desktop/app/DesktopEnvironment") {}
 
 const APP_BASE_NAME = "FD CODE";
+const APP_EDITION_NAME = "FD CODE pSEO Edition";
 
 function resolveDesktopAppStageLabel(input: {
   readonly isDevelopment: boolean;
@@ -106,10 +107,11 @@ export function resolveDesktopAppBranding(input: {
   readonly appVersion: string;
 }): DesktopAppBranding {
   const stageLabel = resolveDesktopAppStageLabel(input);
+  const baseName = input.isDevelopment ? APP_BASE_NAME : APP_EDITION_NAME;
   return {
-    baseName: APP_BASE_NAME,
+    baseName,
     stageLabel,
-    displayName: input.isDevelopment ? `${APP_BASE_NAME} (${stageLabel})` : APP_BASE_NAME,
+    displayName: input.isDevelopment ? `${baseName} (${stageLabel})` : baseName,
   };
 }
 

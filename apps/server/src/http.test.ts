@@ -140,6 +140,77 @@ describe("untraced requests", () => {
 });
 
 describe("browser API CORS", () => {
+  it("allows native pSEO PUT preflights without changing authorization responses", async () => {
+    for (const dev of [false, true]) {
+      const layerRoute = Layer.effectDiscard(
+        Effect.gen(function* () {
+          const router = yield* HttpRouter.HttpRouter;
+          yield* router.add("PUT", "/api/beta/pseo", HttpServerResponse.empty({ status: 401 }));
+        }),
+      );
+      const layerConfig = Layer.effect(
+        ServerConfig.ServerConfig,
+        Effect.gen(function* () {
+          const config = yield* ServerConfig.ServerConfig;
+          return { ...config, devUrl: dev ? new URL("http://localhost:5733") : undefined };
+        }),
+      ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "pseo-cors-test-" })));
+      const layerApp = Layer.merge(layerRoute, ServerHttp.layerBrowserApiCors).pipe(
+        Layer.provide(layerConfig),
+        Layer.provide(NodeServices.layer),
+      );
+      const { handler, dispose } = HttpRouter.toWebHandler(layerApp, { disableLogger: true });
+      try {
+        for (const origin of ["fd-code://app", "fd-code-dev://app"]) {
+          const preflight = await handler(
+            new Request("http://127.0.0.1/api/beta/pseo", {
+              method: "OPTIONS",
+              headers: {
+                origin,
+                "access-control-request-method": "PUT",
+                "access-control-request-headers": "authorization, content-type, dpop",
+              },
+            }),
+          );
+          expect(preflight.status).toBe(204);
+          expect(preflight.headers.get("access-control-allow-origin")).toBe(dev ? origin : "*");
+          expect(preflight.headers.get("access-control-allow-methods")?.split(/,\s*/)).toContain(
+            "PUT",
+          );
+          expect(preflight.headers.get("access-control-allow-headers")?.toLowerCase()).toContain(
+            "authorization",
+          );
+          expect(preflight.headers.get("access-control-allow-credentials")).toBe(
+            dev ? "true" : null,
+          );
+          const unauthorized = await handler(
+            new Request("http://127.0.0.1/api/beta/pseo", {
+              method: "PUT",
+              headers: { origin, "content-type": "application/json" },
+              body: "{}",
+            }),
+          );
+          expect(unauthorized.status).toBe(401);
+        }
+        if (dev) {
+          const foreign = await handler(
+            new Request("http://127.0.0.1/api/beta/pseo", {
+              method: "OPTIONS",
+              headers: {
+                origin: "https://untrusted.example",
+                "access-control-request-method": "PUT",
+              },
+            }),
+          );
+          expect(foreign.headers.get("access-control-allow-origin")).toBeNull();
+          expect(foreign.headers.get("vary")).toContain("Origin");
+        }
+      } finally {
+        await dispose();
+      }
+    }
+  });
+
   it("accepts protocol negotiation with authenticated browser headers", async () => {
     const layerRoute = Layer.effectDiscard(
       Effect.gen(function* () {

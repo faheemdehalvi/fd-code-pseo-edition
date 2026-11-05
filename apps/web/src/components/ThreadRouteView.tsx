@@ -1,7 +1,10 @@
 import { scopedThreadKey } from "@fdcode/client-runtime/environment";
 import type { ScopedThreadRef } from "@fdcode/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { resolvePseoChatRouteAction } from "./pseo/chatRoute";
+import { usePseoWorkspaceLayout } from "./pseo/workspaceContext";
 
 import ChatView from "./ChatView";
 import { resolveDraftPromotionNavigationTarget, threadHasStarted } from "./ChatView.logic";
@@ -29,6 +32,38 @@ import {
  * only survives a route swap when the same parent renders it.
  */
 export function ThreadRouteView({ target }: { target: ThreadRouteTarget }) {
+  const {
+    open: pseoOpen,
+    chatMount,
+    chatRef,
+    setChatRef,
+    setOpen: setPseoOpen,
+  } = usePseoWorkspaceLayout();
+  const matchingChat =
+    chatRef !== null &&
+    target.kind === "server" &&
+    target.threadRef.environmentId === chatRef.environmentId &&
+    target.threadRef.threadId === chatRef.threadId;
+  const embedded = pseoOpen && chatMount !== null && matchingChat;
+  const reachedPseoChat = useRef(false);
+  useEffect(() => {
+    if (!pseoOpen || !chatRef) {
+      reachedPseoChat.current = false;
+      return;
+    }
+    if (matchingChat) {
+      reachedPseoChat.current = true;
+      return;
+    }
+    const action = resolvePseoChatRouteAction({
+      open: pseoOpen,
+      chatRef,
+      routeThreadRef: target.kind === "server" ? target.threadRef : null,
+      reachedChat: reachedPseoChat.current,
+    });
+    if (action === "adopt" && target.kind === "server") setChatRef(target.threadRef);
+    if (action === "close") setPseoOpen(false);
+  }, [pseoOpen, chatRef, setPseoOpen, setChatRef, matchingChat, target]);
   const navigate = useNavigate();
   const draftId = target.kind === "draft" ? target.draftId : null;
   const draftSession = useComposerDraftStore((store) =>
@@ -170,7 +205,18 @@ export function ThreadRouteView({ target }: { target: ThreadRouteTarget }) {
         environmentId={target.threadRef.environmentId}
         threadId={target.threadRef.threadId}
         routeKind="server"
+        reserveTitleBarControlInset={!embedded}
+        floatingLayerZIndex={embedded ? 140 : 40}
       />
+    );
+  }
+
+  if (embedded && chatMount) {
+    return createPortal(
+      <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden [contain:layout]">
+        {view}
+      </div>,
+      chatMount,
     );
   }
 

@@ -33,6 +33,8 @@ import {
 import LegacyThreadSidebar from "./LegacySidebar";
 import { useThreadVisitedMigration } from "../hooks/useThreadVisitedMigration";
 import ThreadSidebar from "./Sidebar";
+import { PseoWorkspaceHost } from "./PseoPanel";
+import { PseoWorkspaceProvider } from "./pseo/workspaceContext";
 import { SettingsSidebarNav } from "./settings/SettingsSidebarNav";
 import { SidebarBrandWidthProbe, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { MainAppLocationTracker } from "./sidebar/mainAppLocation";
@@ -354,7 +356,10 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           )}
           <SidebarRail onDoubleClick={resetSidebarWidth} />
         </Sidebar>
-        {children}
+        <PseoWorkspaceProvider>
+          {children}
+          <PseoWorkspaceHost />
+        </PseoWorkspaceProvider>
         <SidebarControl />
         <NavigationHistoryShortcuts />
         <MainAppLocationTracker />

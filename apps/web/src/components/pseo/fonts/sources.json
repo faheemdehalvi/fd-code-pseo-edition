@@ -1,0 +1,26 @@
+[
+  {
+    "font": "dm-mono-400-latin.woff2",
+    "source": "https://fonts.gstatic.com/s/dmmono/v16/aFTU7PB1QTsUX8KYthqQBK6PYK0.woff2",
+    "sha256": "fd7521f3531a5ccfc655b25c4f22e9871df3ec141ad79bb27fde20d0df347b6d",
+    "bytes": 8688
+  },
+  {
+    "font": "dm-mono-500-latin.woff2",
+    "source": "https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzEYOtbYf-Vlg.woff2",
+    "sha256": "0e263db52797086e763679c54f84ded8cc1249879bc27dca2bd5dd446f6d9f36",
+    "bytes": 8724
+  },
+  {
+    "font": "dm-sans-latin.woff2",
+    "source": "https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K6z9mXg.woff2",
+    "sha256": "468d56b6b25b05b70190b6c233d773f6f1770e8579827ce022a57f03fa8002fb",
+    "bytes": 36980
+  },
+  {
+    "font": "playfair-display-italic-latin.woff2",
+    "source": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFRD-vYSZviVYUb_rj3ij__anPXDTnCjmHKM4nYO7KN_pqTXtHA-X-uE0qEEw.woff2",
+    "sha256": "52d7a083285c974592ae6c7c5cb0d242ed43d10574e7c3ec60dda4ab2858df97",
+    "bytes": 23100
+  }
+]

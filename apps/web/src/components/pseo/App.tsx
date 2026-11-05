@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { parseWorkspace } from "./storage";
 import {
   ArrowRight,
   BookOpen,
@@ -25,6 +24,7 @@ import {
 } from "lucide-react";
 import {
   addEvidence,
+  parseWorkspace,
   approveBrief,
   createArticle,
   exportMarkdown,
@@ -35,7 +35,7 @@ import {
   updateArticle,
   type Article,
   type Workspace,
-} from "./model";
+} from "@fdcode/shared/pseo";
 import styles from "./styles.module.css";
 
 function classes(names: string): string {
@@ -235,7 +235,8 @@ export function App({ workspace, onChange, storageError, hostActions }: Props) {
           <div className={classes("local-note")}>
             <span className={classes("local-dot")} />
             <span>
-              Local workspace<small>Saved in this browser</small>
+              {hostActions ? "Shared workspace" : "Local workspace"}
+              <small>{hostActions ? "Saved with FD CODE" : "Saved in this browser"}</small>
             </span>
           </div>
           <button
@@ -376,7 +377,11 @@ export function App({ workspace, onChange, storageError, hostActions }: Props) {
                 </div>
                 <span className={classes("document-save")}>
                   <span />
-                  {storageError ? "Save unavailable" : "Local autosave"}
+                  {storageError
+                    ? "Save unavailable"
+                    : hostActions
+                      ? "Workspace autosave"
+                      : "Local autosave"}
                 </span>
               </div>
               <div className={classes("document-content")}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { buildPseoAgentPrompt } from "./agentHandoff";
-import { createArticle, createWorkspace, approveBrief, updateArticle } from "./model";
+import { createArticle, createWorkspace, approveBrief, updateArticle } from "@fdcode/shared/pseo";
 
 describe("pSEO agent handoff", () => {
   it("preserves the unapproved brief gate even if a stale article stage says writing", () => {
@@ -56,7 +56,7 @@ describe("pSEO agent handoff", () => {
     expect(prompt).toContain("Discover the available apps and exact native schemas first");
     expect(prompt).toContain("primary FD CODE host");
     expect(prompt).toContain("verify exported files before claiming completion");
-    expect(prompt).toContain("pSEO does not automatically import your response");
+    expect(prompt).toContain("save edits with the native t3_pseo tools");
     expect(prompt).toContain("Do not publish");
   });
 });

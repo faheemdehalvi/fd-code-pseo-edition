@@ -1,10 +1,10 @@
-# FD CODE
+# FD CODE pSEO Edition
 
-FD CODE is Faheem's customised FD CODE app, based on the newer Alpha codebase. It includes Brain continuity, ARTsie tools, a persistent General chat, and local Laya routing.
+FD CODE pSEO Edition includes a native pSEO content workspace, integrated agent chat, Brain continuity, ARTsie tools, a persistent General chat, and local Laya routing.
 
 ## Install on macOS
 
-Download the Apple Silicon DMG from this repository's Releases page, open it, and drag **FD CODE.app** into Applications. Quit the existing FD CODE normally before replacing it. The app keeps its existing T3 data directory and desktop profile; installing it does not import or erase the older Beta profile.
+Download the Apple Silicon DMG from this repository's Releases page, open it, and drag **FD CODE pSEO Edition.app** into Applications. Quit the existing FD CODE normally before replacing it. The app keeps its existing data directory and desktop profile; installing it does not import or erase the older Beta profile.
 
 This release is locally signed, not Apple-notarized. macOS may require you to allow it under System Settings → Privacy & Security after the first launch attempt.
 
@@ -28,15 +28,25 @@ ARTsie and Brain use their installed local services. Their data, provider creden
 
 Open **pSEO** beside ARTsie in the sidebar, or choose **Open pSEO workspace** from the command palette. Create an article, prepare and approve its brief, attach research sources, then move to writing. Brief changes require reapproval; reviewed drafts need fresh checks after edits.
 
-Choose an existing project and select **Work with agent** to prepare a prompt in the normal composer. Review it and choose your configured provider before sending. Agent responses currently return to the conversation; copy reviewed work back into the article. For media work, use **ARTsie** in the workspace. Its panel uses the primary host, which can differ from the selected agent project's environment.
+Use **pSEO chat** inside the workspace to plan and write with your configured agents. It uses the same composer, model selector and model switching as other FD CODE conversations, and its thread remains available in the sidebar. Select **Add article to chat** to include the selected article's context. Ask the agent to save its work into the article; changes appear in the shared workspace. Approve the brief in pSEO before asking for a draft. For media work, use **ARTsie**. The workspace and its chat run on the primary host.
 
-Content is saved in this browser or desktop profile, separately for each origin. Use workspace backup and restore to transfer drafts from the standalone preview or between devices. The preliminary checks do not replace the full publish gate, quality audit or human review. SEO data sources and CMS publishing are not connected yet. The separate native mobile client does not include this workspace.
+The integrated workspace saves content on the primary FD CODE host. The standalone preview keeps a separate browser-local workspace; use backup and restore to transfer its drafts. The preliminary checks do not replace the full publish gate, quality audit or human review. SEO data sources and CMS publishing are not connected yet. The separate native mobile client does not include this workspace.
 
 ## Recall history on demand
 
-Provider switches carry a bounded history handoff. Changing models within a resumed
-provider session keeps its existing context. Neither action automatically adds a
-second Brain digest or runs a graph search.
+Changing the model or provider starts a fresh provider conversation with a compact
+handoff: the initial goal, latest requests, reply and plan, plus links to the saved
+history. Returning to an earlier provider also starts fresh. Changing only options
+such as reasoning effort keeps the provider's normal continuation behavior.
+
+The handoff has a 16 KB serialized history budget by default, roughly 3–4k English
+tokens with provider-dependent tokenization. Short chats are not padded. Long
+requests are explicitly marked for the agent to retrieve in full before acting;
+the complete saved conversation remains available. Switching does not automatically
+run a graph search or push the full transcript. This budget covers the initial
+handoff; later tool retrieval adds context as needed. If the Brain mirror is
+unavailable, switching continues with saved FD CODE history and an explicit
+recovery notice. An explicit recall request still reports retrieval failures.
 
 Use `/rag your question` to search this conversation, or `/graphify your question`
 for graph retrieval. `/grafify` is also accepted. Results are focused and bounded;

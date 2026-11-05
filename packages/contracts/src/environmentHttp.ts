@@ -1,5 +1,15 @@
 import * as Context from "effect/Context";
-import { BetaArtsieInput, BetaBrainCallInput, BetaBrainResponse } from "./beta.ts";
+import {
+  BetaAppChatError,
+  BetaAppChatInput,
+  BetaAppChatLocation,
+  BetaArtsieInput,
+  BetaBrainCallInput,
+  BetaBrainResponse,
+  BetaPseoError,
+  BetaPseoSaveInput,
+  BetaPseoWorkspace,
+} from "./beta.ts";
 import {
   GeneralChatLocation,
   GeneralChatSendInput,
@@ -771,6 +781,29 @@ class EnvironmentBetaHttpApi extends HttpApiGroup.make("beta")
       payload: GeneralChatSendInput,
       success: GeneralChatSendResult,
       error: [...EnvironmentScopedOperationErrors, GeneralChatError],
+    }).middleware(EnvironmentAuthenticatedAuth),
+  )
+  .add(
+    HttpApiEndpoint.post("appChat", "/api/beta/app-chat", {
+      headers: OptionalBearerHeaders,
+      payload: BetaAppChatInput,
+      success: BetaAppChatLocation,
+      error: [...EnvironmentScopedOperationErrors, BetaAppChatError],
+    }).middleware(EnvironmentAuthenticatedAuth),
+  )
+  .add(
+    HttpApiEndpoint.get("pseoWorkspace", "/api/beta/pseo", {
+      headers: OptionalBearerHeaders,
+      success: BetaPseoWorkspace,
+      error: [...EnvironmentScopedOperationErrors, BetaPseoError],
+    }).middleware(EnvironmentAuthenticatedAuth),
+  )
+  .add(
+    HttpApiEndpoint.put("pseoSave", "/api/beta/pseo", {
+      headers: OptionalBearerHeaders,
+      payload: BetaPseoSaveInput,
+      success: BetaPseoWorkspace,
+      error: [...EnvironmentScopedOperationErrors, BetaPseoError],
     }).middleware(EnvironmentAuthenticatedAuth),
   )
   .add(

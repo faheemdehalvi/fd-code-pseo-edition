@@ -32,6 +32,7 @@ import * as ProviderAdapterRegistry from "./ProviderAdapterRegistry.ts";
 import * as ProviderReplayHarness from "./testkit/ProviderReplayHarness.ts";
 import { checkpointWorkspace } from "@fdcode/provider-testing/replayWorkspace";
 import * as ProviderAdapter from "@fdcode/provider-core/server/ProviderAdapter";
+import { modelSelectionsEqual } from "@fdcode/shared/model";
 
 const driver = ProviderDriverKind.make("codex");
 const providerInstanceId = ProviderInstanceId.make("codex-restart-test");
@@ -87,6 +88,7 @@ function makeRestartAdapter(
   state: Ref.Ref<RestartAdapterState>,
   sessionCapabilities: OrchestrationV2ProviderCapabilities = pooledCapabilities,
   providerInstanceId = initialSelection.instanceId,
+  replacement: ModelSelection = replacementSelection,
 ): ProviderAdapter.ProviderAdapterV2["Service"] {
   return {
     instanceId: providerInstanceId,
@@ -94,7 +96,7 @@ function makeRestartAdapter(
     getCapabilities: () => Effect.succeed(sessionCapabilities),
     planSelectionTransition: ({ current, target }) =>
       Effect.succeed(
-        current.model === target.model
+        modelSelectionsEqual(current, target)
           ? ({ type: "apply_on_next_turn" } as const)
           : ({ type: "restart_session" } as const),
       ),
@@ -102,7 +104,7 @@ function makeRestartAdapter(
       Effect.gen(function* () {
         const failThisOpen = yield* Ref.modify(state, (current) => {
           const shouldFail =
-            sessionInput.modelSelection.model === replacementSelection.model &&
+            modelSelectionsEqual(sessionInput.modelSelection, replacement) &&
             !current.failedReplacementOpen;
           return [
             shouldFail,
@@ -192,7 +194,9 @@ function makeRestartAdapter(
             Effect.gen(function* () {
               const createdAt = yield* DateTime.now;
               return {
-                id: ProviderThreadId.make(`provider-thread:${threadInput.threadId}`),
+                id:
+                  threadInput.existingProviderThread?.id ??
+                  ProviderThreadId.make(`provider-thread:${threadInput.threadId}`),
                 driver,
                 providerInstanceId,
                 providerSessionId: sessionInput.providerSessionId,
@@ -200,7 +204,7 @@ function makeRestartAdapter(
                 ownerNodeId: null,
                 nativeThreadRef: {
                   driver,
-                  nativeId: `native-thread:${threadInput.threadId}`,
+                  nativeId: `native-thread:${threadInput.existingProviderThread?.id ?? threadInput.threadId}`,
                   strength: "strong",
                 },
                 nativeConversationHeadRef: null,
@@ -231,7 +235,7 @@ function makeRestartAdapter(
                 input,
                 providerTurnId: ProviderTurnId.make(`provider-turn:${input.attemptId}`),
               } satisfies ActiveTurn;
-              if (input.modelSelection.model === initialSelection.model) {
+              if (modelSelectionsEqual(input.modelSelection, initialSelection)) {
                 const occurredAt = yield* DateTime.now;
                 yield* Ref.update(state, (current) => ({ ...current, activeTurn: active }));
                 yield* Queue.offer(events, {
@@ -388,9 +392,13 @@ function makeCompletingHandoffAdapter(
   };
 }
 
-it.live("retries a failed selection restart session open before completing", () =>
+it.live("retries a failed options-only selection restart session open before completing", () =>
   Effect.scoped(
     Effect.gen(function* () {
+      const replacementSelection = {
+        ...initialSelection,
+        options: [{ id: "reasoningEffort", value: "high" }],
+      } satisfies ModelSelection;
       const cwd = yield* checkpointWorkspace("selection-restart-lifecycle");
       const threadId = ThreadId.make("thread:selection-restart-lifecycle");
       const state = yield* Ref.make<RestartAdapterState>({
@@ -400,7 +408,9 @@ it.live("retries a failed selection restart session open before completing", () 
         closedSessionCount: 0,
         failedReplacementOpen: false,
       });
-      const layerRegistry = ProviderAdapterRegistry.layerSingle(makeRestartAdapter(state));
+      const layerRegistry = ProviderAdapterRegistry.layerSingle(
+        makeRestartAdapter(state, pooledCapabilities, providerInstanceId, replacementSelection),
+      );
 
       const result = yield* Effect.gen(function* () {
         const orchestrator = yield* Orchestrator.OrchestratorV2;
@@ -515,7 +525,7 @@ it.live("retries a failed selection restart session open before completing", () 
         ),
         "selection restart supersede must not project hard-Stop interrupt items",
       );
-      assert.equal(projection.runs.at(-1)?.modelSelection.model, replacementSelection.model);
+      assert.deepEqual(projection.runs.at(-1)?.modelSelection, replacementSelection);
       assert.equal(projection.runs.at(-1)?.status, "completed");
       assert.isTrue(captured.failedReplacementOpen);
       assert.equal(captured.closedSessionCount, 0);
@@ -540,8 +550,9 @@ it.live("retries a failed selection restart session open before completing", () 
       );
       assert.equal(
         projection.providerThreads[0]?.providerSessionId,
-        projection.providerSessions.find((session) => session.model === replacementSelection.model)
-          ?.id,
+        projection.providerSessions.findLast(
+          (session) => session.model === replacementSelection.model,
+        )?.id,
       );
     }),
   ),
@@ -824,7 +835,7 @@ it.live("detaches the old provider session after an active provider handoff", ()
 );
 
 it.live.each(["active", "idle", "selection-command", "pooled", "separate-home"] as const)(
-  "preserves native history only for compatible account switches (%s)",
+  "uses portable capsules for account switches even with compatible continuation keys (%s)",
   (mode) =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -958,41 +969,21 @@ it.live.each(["active", "idle", "selection-command", "pooled", "separate-home"] 
           const targetThread = second.providerThreads.find(
             (thread) => thread.id === second.thread.activeProviderThreadId,
           )!;
-          if (mode === "separate-home") {
-            assert.notEqual(targetThread.id, originalThread.id);
-            assert.lengthOf(second.contextHandoffs, 1);
-            assert.lengthOf(second.contextTransfers, 1);
-            assert.isEmpty(resumes);
-            assert.notEqual(messages[1], "second");
-            return;
-          }
-          assert.equal(targetThread.id, originalThread.id);
-          assert.deepEqual(targetThread.nativeThreadRef, originalThread.nativeThreadRef);
-          assert.equal(targetThread.providerInstanceId, targetId);
-          assert.notEqual(targetThread.providerSessionId, originalThread.providerSessionId);
-          assert.isEmpty(second.contextHandoffs);
-          assert.isEmpty(second.contextTransfers);
-          assert.deepEqual(resumes, [
-            { instanceId: targetId, nativeId: originalThread.nativeThreadRef?.nativeId },
-          ]);
-          assert.deepEqual(messages, ["first", "second"]);
-          assert.equal((yield* Ref.get(state)).closedSessionCount, mode === "pooled" ? 0 : 1);
-          if (mode === "pooled") {
-            assert.isFalse(
-              second.providerSessions.some(
-                (session) => session.id === originalThread.providerSessionId,
-              ),
-            );
-          }
+          assert.notEqual(targetThread.id, originalThread.id);
+          assert.lengthOf(second.contextHandoffs, 1);
+          assert.lengthOf(second.contextTransfers, 1);
+          assert.isEmpty(resumes);
+          assert.include(messages[1] ?? "", "Compact capsule");
+          assert.include(messages[1] ?? "", "t3_thread_read");
           const third = yield* dispatch("third", { ...selection, model: "complete" });
           const returnedThread = third.providerThreads.find(
             (thread) => thread.id === third.thread.activeProviderThreadId,
           )!;
-          assert.equal(returnedThread.id, originalThread.id);
-          assert.deepEqual(returnedThread.nativeThreadRef, originalThread.nativeThreadRef);
-          assert.equal(returnedThread.providerInstanceId, providerInstanceId);
-          assert.isEmpty(third.contextHandoffs);
-          assert.deepEqual(messages, ["first", "second", "third"]);
+          assert.notEqual(returnedThread.id, originalThread.id);
+          assert.notEqual(returnedThread.id, targetThread.id);
+          assert.lengthOf(third.contextHandoffs, 2);
+          assert.include(messages[2] ?? "", "Compact capsule");
+          assert.isEmpty(resumes);
         }).pipe(Effect.provide(ProviderReplayHarness.layerWithRegistry({ name }, layerRegistry)));
       }),
     ),

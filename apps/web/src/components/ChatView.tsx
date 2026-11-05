@@ -870,6 +870,7 @@ type ChatViewProps =
       threadId: ThreadId;
       onDiffPanelOpen?: () => void;
       reserveTitleBarControlInset?: boolean;
+      floatingLayerZIndex?: number;
       forceExpandedMobileComposer?: boolean;
       routeKind: "server";
       draftId?: never;
@@ -879,6 +880,7 @@ type ChatViewProps =
       threadId: ThreadId;
       onDiffPanelOpen?: () => void;
       reserveTitleBarControlInset?: boolean;
+      floatingLayerZIndex?: number;
       forceExpandedMobileComposer?: boolean;
       routeKind: "draft";
       draftId: DraftId;
@@ -1042,6 +1044,7 @@ export default function ChatView(props: ChatViewProps) {
     routeKind,
     onDiffPanelOpen,
     reserveTitleBarControlInset = true,
+    floatingLayerZIndex = 40,
     forceExpandedMobileComposer = false,
   } = props;
   const canOperateThread = useEnvironmentScope(environmentId, AuthOrchestrationOperateScope);
@@ -8259,6 +8262,7 @@ export default function ChatView(props: ChatViewProps) {
                           ) : null}
                           {!composerMounted ? null : (
                             <ChatComposer
+                              floatingLayerZIndex={floatingLayerZIndex}
                               canOperateThread={canOperateThread}
                               reportedModelSelection={reportedModelSelection}
                               multipleModelSelections={multipleModelSelections}

@@ -1,6 +1,7 @@
 import type { OpenCodeClient } from "@opencode/client/effect";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
+import * as Schedule from "effect/Schedule";
 
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import type { OpenCode2Model } from "./status.ts";
@@ -22,7 +23,15 @@ export const loadOpenCode2Catalog = (
   const location = { directory };
   return Effect.all(
     {
-      models: client.model.list({ location }),
+      // Plugin activation can outlast the listening announcement by several seconds.
+      // The model loader's 20-second budget includes these retries and server startup.
+      models: client.model.list({ location }).pipe(
+        Effect.retry({
+          times: 39,
+          schedule: Schedule.spaced("500 millis"),
+          while: (error) => error._tag === "ServiceUnavailableError",
+        }),
+      ),
       providers: client.provider
         .list({ location })
         .pipe(Effect.timeout(PROVIDER_NAME_TIMEOUT), Effect.option),

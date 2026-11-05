@@ -104,26 +104,24 @@ function layerTest(
   return ProviderSwitch.layer.pipe(Layer.provide(layerRegistry));
 }
 
-it.effect(
-  "restarts and releases the current session for unsupported in-session model changes",
-  () =>
-    Effect.gen(function* () {
-      const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
-      const result = yield* service.plan({
-        projection: projection(),
-        targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
-      });
-      assert.equal(result.transition.type, "restart_and_resume");
-      assert.deepEqual(result.releaseProviderSessionIds, [currentSessionId]);
-    }).pipe(
-      Effect.provide(
-        layerTest({ [currentInstanceId]: { continuationKey: "codex:account:primary" } }),
-      ),
+it.effect("hands off and releases the current session on an actual model change", () =>
+  Effect.gen(function* () {
+    const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
+    const result = yield* service.plan({
+      projection: projection(),
+      targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
+    });
+    assert.equal(result.transition.type, "create_with_handoff");
+    assert.deepEqual(result.releaseProviderSessionIds, [currentSessionId]);
+  }).pipe(
+    Effect.provide(
+      layerTest({ [currentInstanceId]: { continuationKey: "codex:account:primary" } }),
     ),
+  ),
 );
 
 it.effect.each(["stopped", "error"] as const)(
-  "restarts and releases the live session when a newer %s session exists",
+  "hands off and releases the live session when a newer %s session exists",
   (deadStatus) =>
     Effect.gen(function* () {
       const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
@@ -138,7 +136,7 @@ it.effect.each(["stopped", "error"] as const)(
         },
         targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
       });
-      assert.equal(result.transition.type, "restart_and_resume");
+      assert.equal(result.transition.type, "create_with_handoff");
       assert.deepEqual(result.releaseProviderSessionIds, [currentSessionId]);
     }).pipe(
       Effect.provide(
@@ -167,7 +165,7 @@ it.effect("releases the newest live session, not the newest record overall", () 
       },
       targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
     });
-    assert.equal(result.transition.type, "restart_and_resume");
+    assert.equal(result.transition.type, "create_with_handoff");
     assert.deepEqual(result.releaseProviderSessionIds, [newerLiveSessionId]);
   }).pipe(
     Effect.provide(
@@ -244,7 +242,7 @@ it.effect("falls back to the native provider thread when every recorded session 
       projection: deadNativeThreadProjection("stopped"),
       targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
     });
-    assert.equal(result.transition.type, "restart_and_resume");
+    assert.equal(result.transition.type, "create_with_handoff");
     assert.deepEqual(result.releaseProviderSessionIds, []);
   }).pipe(
     Effect.provide(
@@ -276,7 +274,7 @@ it.effect("hands off from a native provider thread after its session detaches", 
 );
 
 it.effect.each(["stopped", "error"] as const)(
-  "applies a model change on next turn when a %s session negotiated model switching",
+  "uses a fresh handoff even when a %s session negotiated model switching",
   (deadStatus) =>
     Effect.gen(function* () {
       const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
@@ -284,7 +282,7 @@ it.effect.each(["stopped", "error"] as const)(
         projection: deadNativeThreadProjection(deadStatus, CodexProviderCapabilitiesV2),
         targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
       });
-      assert.equal(result.transition.type, "switch_model_in_session");
+      assert.equal(result.transition.type, "create_with_handoff");
       assert.deepEqual(result.releaseProviderSessionIds, []);
     }).pipe(
       Effect.provide(
@@ -295,16 +293,15 @@ it.effect.each(["stopped", "error"] as const)(
     ),
 );
 
-it.effect("rejects a model change the dead record never negotiated support for", () =>
+it.effect("creates a fresh model session even without in-session switching support", () =>
   Effect.gen(function* () {
     const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
-    const result = yield* service
-      .plan({
-        projection: deadNativeThreadProjection("stopped"),
-        targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
-      })
-      .pipe(Effect.flip);
-    assert.instanceOf(result, ProviderSwitch.ProviderSwitchPlanError);
+    const result = yield* service.plan({
+      projection: deadNativeThreadProjection("stopped"),
+      targetModelSelection: { instanceId: currentInstanceId, model: "gpt-5.2-codex" },
+    });
+    assert.equal(result.transition.type, "create_with_handoff");
+    assert.equal(result.targetProviderThreadId, null);
   }).pipe(
     Effect.provide(
       layerTest({ [currentInstanceId]: { continuationKey: "codex:account:primary" } }, (input) =>
@@ -314,7 +311,7 @@ it.effect("rejects a model change the dead record never negotiated support for",
   ),
 );
 
-it.effect("distinguishes compatible and incompatible instances of the same driver", () =>
+it.effect("hands off for both compatible and incompatible instances of the same driver", () =>
   Effect.gen(function* () {
     const service = yield* ProviderSwitch.ProviderSwitchServiceV2;
     const compatibleId = ProviderInstanceId.make("codex_compatible");
@@ -327,7 +324,7 @@ it.effect("distinguishes compatible and incompatible instances of the same drive
       projection: projection(),
       targetModelSelection: { instanceId: incompatibleId, model: "gpt-5.1-codex" },
     });
-    assert.equal(compatible.transition.type, "restart_and_resume");
+    assert.equal(compatible.transition.type, "create_with_handoff");
     assert.equal(incompatible.transition.type, "create_with_handoff");
   }).pipe(
     Effect.provide(

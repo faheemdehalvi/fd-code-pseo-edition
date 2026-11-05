@@ -2,6 +2,7 @@
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as NodeSqlite from "node:sqlite";
 import { describe, expect } from "vite-plus/test";
 import { it } from "@effect/vitest";
 import { EventId, MessageId, ThreadId, type OrchestrationV2StoredEvent } from "@fdcode/contracts";
@@ -368,3 +369,76 @@ describe("Alpha native Brain continuity", () => {
     ),
   );
 });
+
+it.effect("switches with durable thread recovery when the Brain mirror rejects a write", () =>
+  sandbox((home) =>
+    withBrain(
+      home,
+      [message(1, "Preserve this durable decision.")],
+      Effect.gen(function* () {
+        const brain = yield* BrainMemory.BrainMemory;
+        const database = new NodeSqlite.DatabaseSync(
+          NodePath.join(home, "alpha", "brain", "sessions.sqlite"),
+        );
+        try {
+          database.exec(
+            "CREATE TRIGGER injected_mirror_failure BEFORE INSERT ON brain_session_events BEGIN SELECT RAISE(ABORT, 'simulated mirror unavailable'); END",
+          );
+          const prepared = yield* brain.prepare({
+            threadId,
+            text: "Continue with the selected model.",
+            switching: true,
+          });
+          expect(prepared.text).toBe("Continue with the selected model.");
+          expect(prepared.context).toContain("Brain mirror unavailable");
+          expect(prepared.context).toContain("no mirror revision is confirmed");
+          expect(prepared.context).toContain(
+            `t3_thread_read({"threadId":"${threadId}","view":"messages"`,
+          );
+          expect(prepared.context).toContain("afterPosition=nextPosition");
+          expect(prepared.context).toContain("textOffset=nextTextOffset");
+          expect(prepared.context).not.toMatch(/revision \d+/);
+          expect(prepared.context).not.toContain("simulated mirror unavailable");
+          expect(database.prepare("SELECT count(*) AS n FROM brain_session_events").get()?.n).toBe(
+            0,
+          );
+          database.exec("DROP TRIGGER injected_mirror_failure");
+          expect(yield* brain.sync(threadId)).toBe(1);
+          expect((yield* brain.read(threadId, {})).events[0]?.text).toContain(
+            "Preserve this durable decision.",
+          );
+        } finally {
+          database.close();
+        }
+      }),
+    ),
+  ),
+);
+
+it.effect("keeps explicit recall failures visible even during a model switch", () =>
+  sandbox((home) =>
+    withBrain(
+      home,
+      [message(1, "Preserve this durable decision.")],
+      Effect.gen(function* () {
+        const brain = yield* BrainMemory.BrainMemory;
+        const database = new NodeSqlite.DatabaseSync(
+          NodePath.join(home, "alpha", "brain", "sessions.sqlite"),
+        );
+        try {
+          database.exec(
+            "CREATE TRIGGER injected_mirror_failure BEFORE INSERT ON brain_session_events BEGIN SELECT RAISE(ABORT, 'simulated mirror unavailable'); END",
+          );
+          for (const text of ["/rag decision", "/graphify decision"]) {
+            const result = yield* Effect.result(brain.prepare({ threadId, text, switching: true }));
+            expect(result._tag).toBe("Failure");
+            if (result._tag === "Failure")
+              expect(result.failure).toBeInstanceOf(BrainMemory.BrainMemoryError);
+          }
+        } finally {
+          database.close();
+        }
+      }),
+    ),
+  ),
+);

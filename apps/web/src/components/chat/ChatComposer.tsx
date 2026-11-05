@@ -973,7 +973,11 @@ function composerCommandMenuPositionsEqual(
   );
 }
 
-function ComposerCommandMenuLayer(props: { anchor: HTMLElement | null; children: ReactNode }) {
+function ComposerCommandMenuLayer(props: {
+  anchor: HTMLElement | null;
+  children: ReactNode;
+  floatingLayerZIndex: number;
+}) {
   const [position, setPosition] = useState<ComposerCommandMenuPosition | null>(null);
 
   useLayoutEffect(() => {
@@ -1030,13 +1034,14 @@ function ComposerCommandMenuLayer(props: { anchor: HTMLElement | null; children:
 
   return createPortal(
     <div
-      className="pointer-events-auto fixed z-40 flex flex-col"
+      className="pointer-events-auto fixed flex flex-col"
       data-composer-drawer-layer="true"
       style={{
         bottom: position.bottom,
         left: position.left,
         maxHeight: position.maxHeight,
         width: position.width,
+        zIndex: props.floatingLayerZIndex,
       }}
     >
       {props.children}
@@ -1487,6 +1492,7 @@ export interface ChatComposerHandle {
 }
 
 export interface ChatComposerProps {
+  floatingLayerZIndex?: number;
   composerDraftTarget: ScopedThreadRef | DraftId;
   environmentId: EnvironmentId;
   canOperateThread: boolean;
@@ -1887,6 +1893,7 @@ const NO_PROVIDER_SLASH_COMMANDS: ServerProvider["slashCommands"] = [];
 
 export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps) {
   const {
+    floatingLayerZIndex = 40,
     composerDraftTarget,
     environmentId,
     canOperateThread,
@@ -6624,7 +6631,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               )}
             >
               {isStashMenuOpen && !composerMenuOpen && !isComposerApprovalState && (
-                <ComposerCommandMenuLayer anchor={composerMenuAnchor}>
+                <ComposerCommandMenuLayer
+                  anchor={composerMenuAnchor}
+                  floatingLayerZIndex={floatingLayerZIndex}
+                >
                   <ComposerStashMenu
                     entries={stashQueue}
                     stashShortcutLabel={shortcutLabelForCommand(keybindings, "composer.stash", {
@@ -6651,7 +6661,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   : ""}
               </div>
               {composerSuggestionsVisible && (
-                <ComposerCommandMenuLayer anchor={composerMenuAnchor}>
+                <ComposerCommandMenuLayer
+                  anchor={composerMenuAnchor}
+                  floatingLayerZIndex={floatingLayerZIndex}
+                >
                   <ComposerCommandMenu
                     listId={composerSuggestionListId}
                     items={composerMenuItems}

@@ -52,7 +52,6 @@ import {
 import * as HostProcess from "@fdcode/shared/HostProcess";
 import packageJson from "../../package.json" with { type: "json" };
 const isCodexAppServerSpawnError = Schema.is(CodexErrors.CodexAppServerSpawnError);
-const RATE_LIMITS_PROBE_TIMEOUT_MS = 3_000;
 
 type CodexRateLimitsProbe =
   | {
@@ -67,7 +66,9 @@ type CodexRateLimitsProbe =
   | { readonly failure: string };
 
 const CODEX_APP_SERVER_PROBE_FORCE_KILL_AFTER = "2 seconds" as const;
-const CODEX_CATALOG_REFRESH_TIMEOUT = "3 seconds" as const;
+const CODEX_OPTIONAL_PROBE_TIMEOUT_MS = 3_000;
+// Optional discovery should leave room for shutdown within the usual status budget.
+const CODEX_PROBE_CLEANUP_RESERVE_MS = 3_000;
 const CODEX_CATALOG_REFRESH_POLL = "100 millis" as const;
 const CODEX_CLIENT_NAME = "FD CODE";
 // Codex's probe does a full handshake plus account, models, and skills requests, which can
@@ -332,6 +333,19 @@ const requestAllCodexModels = Effect.fn("requestAllCodexModels")(function* (
   return models;
 });
 
+const optionalProbeBudget = Effect.fn("optionalProbeBudget")(function* (spawnedAtMs: number) {
+  const now = DateTime.toEpochMillis(yield* DateTime.now);
+  return Duration.millis(
+    Math.max(
+      0,
+      Math.min(
+        CODEX_OPTIONAL_PROBE_TIMEOUT_MS,
+        spawnedAtMs + CODEX_AUTH_PROBE_TIMEOUT_MS - CODEX_PROBE_CLEANUP_RESERVE_MS - now,
+      ),
+    ),
+  );
+});
+
 const decodeCodexModelsCacheStamp = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Struct({ fetched_at: Schema.String })),
 );
@@ -362,20 +376,28 @@ const requestCodexChatGptModels = Effect.fn("requestCodexChatGptModels")(functio
   readonly spawnedAtMs: number;
 }) {
   const models = yield* requestAllCodexModels(input.client);
+  const budget = yield* optionalProbeBudget(input.spawnedAtMs);
+  if (Duration.toMillis(budget) === 0) return models;
+  // The cache wait and every page of the second list share one optional budget.
   const refreshed = yield* readCodexModelsCacheFetchedAt(input.codexHome).pipe(
     Effect.repeat({
       schedule: Schedule.spaced(CODEX_CATALOG_REFRESH_POLL),
       until: (fetchedAtMs) => fetchedAtMs >= input.spawnedAtMs,
     }),
-    Effect.timeoutOption(CODEX_CATALOG_REFRESH_TIMEOUT),
+    Effect.andThen(requestAllCodexModels(input.client)),
+    Effect.timeoutOption(budget),
+    Effect.catch((error) =>
+      Effect.logDebug("Codex catalog refresh failed.", { cause: error }).pipe(
+        Effect.as(Option.none()),
+      ),
+    ),
   );
   if (Option.isNone(refreshed)) {
     yield* Effect.logWarning(
       "Codex did not refresh its model catalog in time; using the cached catalog.",
     );
-    return models;
   }
-  return yield* requestAllCodexModels(input.client);
+  return Option.getOrElse(refreshed, () => models);
 });
 
 /**
@@ -455,17 +477,20 @@ export const withCodexAppServerClient = Effect.fn("withCodexAppServerClient")(fu
   return { client, initialize };
 });
 
-const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(function* (input: {
-  readonly binaryPath: string;
-  readonly homePath?: string;
-  readonly launchArgs?: string;
-  readonly cwd: string;
-  readonly customModels?: ReadonlyArray<CustomModelSetting>;
-  readonly environment?: NodeJS.ProcessEnv;
-  readonly skipNativeUsage?: boolean;
-}) {
+export const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(function* (
+  input: {
+    readonly binaryPath: string;
+    readonly homePath?: string;
+    readonly launchArgs?: string;
+    readonly cwd: string;
+    readonly customModels?: ReadonlyArray<CustomModelSetting>;
+    readonly environment?: NodeJS.ProcessEnv;
+    readonly skipNativeUsage?: boolean;
+  },
+  connect: typeof withCodexAppServerClient = withCodexAppServerClient,
+) {
   const spawnedAtMs = DateTime.toEpochMillis(yield* DateTime.now);
-  const { client, initialize } = yield* withCodexAppServerClient(input);
+  const { client, initialize } = yield* connect(input);
 
   const versionMatch = initialize.userAgent.match(/\/([^\s]+)/);
   const version = versionMatch ? versionMatch[1] : undefined;
@@ -480,11 +505,18 @@ const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(fun
     } satisfies CodexAppServerProviderSnapshot;
   }
 
+  const optionalBudget = yield* optionalProbeBudget(spawnedAtMs);
   const [skillsResponse, models, rateLimits] = yield* Effect.all(
     [
-      client.request("skills/list", {
-        cwds: [input.cwd],
-      }),
+      client.request("skills/list", { cwds: [input.cwd] }).pipe(
+        Effect.timeoutOption(optionalBudget),
+        Effect.map((response) => Option.getOrElse(response, () => ({ data: [] }))),
+        Effect.catch((error) =>
+          Effect.logDebug("Codex skill discovery failed.", { cause: error }).pipe(
+            Effect.as({ data: [] }),
+          ),
+        ),
+      ),
       accountResponse.account?.type === "chatgpt"
         ? requestCodexChatGptModels({ client, codexHome: initialize.codexHome, spawnedAtMs })
         : requestAllCodexModels(client),
@@ -497,7 +529,7 @@ const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(fun
               resetCredits: response.rateLimitResetCredits,
               accountId: response.accountId,
             })),
-            Effect.timeoutOption(Duration.millis(RATE_LIMITS_PROBE_TIMEOUT_MS)),
+            Effect.timeoutOption(optionalBudget),
             Effect.map(
               Option.getOrElse((): CodexRateLimitsProbe => ({
                 failure: "Codex did not answer the usage request.",
@@ -663,8 +695,9 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
     environment: resolvedEnvironment,
     ...(managedAuth ? { skipNativeUsage: true } : {}),
   }).pipe(
-    Effect.scoped,
+    // A completed probe must survive its child process taking time to shut down.
     Effect.timeoutOption(Duration.millis(CODEX_AUTH_PROBE_TIMEOUT_MS)),
+    Effect.scoped,
     Effect.result,
   );
 

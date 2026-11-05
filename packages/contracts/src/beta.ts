@@ -140,3 +140,59 @@ export const BetaArtsieInput = Schema.Union([
   artsieAction("reveal", { path: Schema.optional(ArtsieWorkspacePath) }),
 ]);
 export type BetaArtsieInput = typeof BetaArtsieInput.Type;
+
+// Each app chat is an ordinary thread in that app's own project, so it also lists in the sidebar.
+export const BetaAppChatApp = Schema.Literals(["pseo", "artsie"]);
+export type BetaAppChatApp = typeof BetaAppChatApp.Type;
+export const BETA_APP_CHAT_THREAD_PREFIX = {
+  pseo: "pseo-chat-",
+  artsie: "artsie-chat-",
+} as const satisfies Record<BetaAppChatApp, string>;
+export const BETA_APP_CHAT_PROJECT_ID = {
+  pseo: "pseo-chat-project",
+  artsie: "artsie-chat-project",
+} as const satisfies Record<BetaAppChatApp, string>;
+export const BetaAppChatInput = Schema.Struct({ app: BetaAppChatApp, fresh: Schema.Boolean });
+export type BetaAppChatInput = typeof BetaAppChatInput.Type;
+export const BetaAppChatLocation = Schema.Struct({ threadId: ThreadId, projectId: ProjectId });
+export class BetaAppChatError extends Schema.TaggedError<BetaAppChatError>()(
+  "BetaAppChatError",
+  { cause: Schema.optional(Schema.Defect()) },
+  { httpApiStatus: 400 },
+) {
+  override get message(): string {
+    return "The app chat could not be opened. Try again.";
+  }
+}
+
+// The workspace document is validated by `parseWorkspace` in @fdcode/shared/pseo on both ends.
+export const BetaPseoWorkspace = Schema.Struct({
+  workspace: Schema.Unknown,
+  revision: Schema.Int,
+});
+export type BetaPseoWorkspace = typeof BetaPseoWorkspace.Type;
+export const BetaPseoSaveInput = Schema.Struct({
+  workspace: Schema.Unknown,
+  baseRevision: Schema.Int,
+});
+export type BetaPseoSaveInput = typeof BetaPseoSaveInput.Type;
+export class BetaPseoError extends Schema.TaggedError<BetaPseoError>()(
+  "BetaPseoError",
+  {
+    reason: Schema.Literals(["conflict", "invalid", "operation_failed"]),
+    detail: Schema.optional(Schema.String),
+    cause: Schema.optional(Schema.Defect()),
+  },
+  { httpApiStatus: 409 },
+) {
+  override get message(): string {
+    switch (this.reason) {
+      case "conflict":
+        return "An agent or another window changed this workspace. The latest version has been loaded.";
+      case "invalid":
+        return this.detail ?? "This workspace could not be saved because it is invalid.";
+      case "operation_failed":
+        return "The pSEO workspace could not be saved. Your changes are still on screen; try again.";
+    }
+  }
+}

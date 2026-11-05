@@ -218,8 +218,8 @@ describe("DesktopAppIdentity", () => {
         const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
         yield* identity.configure;
 
-        assert.deepEqual(calls.setName, ["FD CODE Beta"]);
-        assert.equal(calls.setAboutPanelOptions[0]?.applicationName, "FD CODE");
+        assert.deepEqual(calls.setName, ["FD CODE pSEO Edition"]);
+        assert.equal(calls.setAboutPanelOptions[0]?.applicationName, "FD CODE pSEO Edition");
         assert.equal(calls.setAboutPanelOptions[0]?.applicationVersion, "1.2.3");
         assert.equal(calls.setAboutPanelOptions[0]?.version, "0123456789ab");
         assert.deepEqual(calls.setDockIcon, []);
@@ -261,11 +261,11 @@ describe("DesktopAppIdentity", () => {
 
         const runtimeName = calls.setName[0];
         assert.isDefined(runtimeName);
-        assert.equal(runtimeName, `FD CODE ${stage}`);
+        assert.equal(runtimeName, stage === "Dev" ? "FD CODE Dev" : "FD CODE pSEO Edition");
         assert.match(runtimeName.replaceAll(" ", ""), /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/);
         assert.equal(
           calls.setAboutPanelOptions[0]?.applicationName,
-          stage === "Dev" ? "FD CODE (Dev)" : "FD CODE",
+          stage === "Dev" ? "FD CODE (Dev)" : "FD CODE pSEO Edition",
         );
       }),
       { calls, environment },
